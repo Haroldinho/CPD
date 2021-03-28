@@ -1,11 +1,13 @@
 """
 Test and validate the interpolation results for
 """
+
 from operator import itemgetter
 
 import numpy as np
 import pandas as pd
 import scipy
+from scipy.interpolate import CubicSpline
 from scipy.interpolate import CubicSpline
 
 from utilities import PowerTestLogger
@@ -54,7 +56,6 @@ class ThresholdSelector:
     Be careful, the solution will not make sense outside of the solution bound.
     right now for ARL_0 between min(ARL_0) and 150,000
     """
-
     def __init__(self, folder):
         self._folder_root = folder
         self._batch_sizes = {}
@@ -92,9 +93,9 @@ class ThresholdSelector:
 
         points = list(zip(self._arl_threshold_batch_df["Batch Size"], self._arl_threshold_batch_df["ARL_0"]))
         values = self._arl_threshold_batch_df["Threshold"]
-        #         for _, row in self._arl_threshold_batch_df:
-        #             points.append((row["Batch Size"], row["ARL_0"]))
-        #             values.append("Threshold")
+#         for _, row in self._arl_threshold_batch_df:
+#             points.append((row["Batch Size"], row["ARL_0"]))
+#             values.append("Threshold")
         points = np.array(points)
         values = np.array(values)
         print("Shape of points ({})".format(points.shape))
@@ -140,3 +141,8 @@ if __name__ == "__main__":
         h_t = h_selector.get_threshold(batch, desired_arl)
         print("For a desired ARL_0={0:2.4f} and batch size={1:d}".format(desired_arl, batch), end=", ")
         print("the threshold is {0:3.4f}.".format(h_t))
+
+
+
+
+

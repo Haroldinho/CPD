@@ -86,6 +86,7 @@ def simulate_ladder_point_process(start_time, end_time, my_arrival_rates, time_o
 
 
 def simulate_deds_return_wait_times(start_time, end_time, my_arrival_rates, time_of_changes, my_service_rates,
+                                    discard_fraction=0.0,
                                     warm_up_time=None):
     deds_object = SingleServerMarkovianQueue(start_time, end_time, my_arrival_rates, time_of_changes,
                                              my_service_rates, time_of_changes)
@@ -94,11 +95,14 @@ def simulate_deds_return_wait_times(start_time, end_time, my_arrival_rates, time
     else:
         wait_times = deds_object.simulate_deds_process()
     departure_times = deds_object.get_recorded_times()
+    num_to_start_keeping = int(discard_fraction * len(wait_times))
+    wait_times = wait_times[num_to_start_keeping:]
+    departure_times = departure_times[num_to_start_keeping:]
     return wait_times, departure_times
 
 
 def simulate_deds_return_age(start_time, end_time, my_arrival_rates, time_of_changes, my_service_rates,
-                             type="median", warm_up_time=None):
+                             type="median", discard_fraction=0.0, warm_up_time=None):
     deds_object = SingleServerMarkovianQueue(start_time, end_time, my_arrival_rates, time_of_changes,
                                              my_service_rates, time_of_changes)
     if warm_up_time:
@@ -107,11 +111,14 @@ def simulate_deds_return_age(start_time, end_time, my_arrival_rates, time_of_cha
         deds_object.simulate_deds_process()
     recording_times = deds_object.return_recording_times_age()
     mean_age_times = deds_object.return_mean_process_age()
+    num_to_start_keeping = int(discard_fraction * len(mean_age_times))
+    mean_age_times = mean_age_times[num_to_start_keeping:]
+    recording_times = recording_times[num_to_start_keeping:]
     return mean_age_times, recording_times
 
 
-def simulate_deds_queue_length(start_time, end_time, my_arrival_rates, time_of_changes, my_service_rates,
-                               warm_up_time=None):
+def simulate_deds_return_queue_length(start_time, end_time, my_arrival_rates, time_of_changes, my_service_rates,
+                                      discard_fraction=0.1, warm_up_time=None):
     deds_object = SingleServerMarkovianQueue(start_time, end_time, my_arrival_rates, time_of_changes,
                                              my_service_rates, time_of_changes)
     if warm_up_time:
@@ -120,6 +127,9 @@ def simulate_deds_queue_length(start_time, end_time, my_arrival_rates, time_of_c
         deds_object.simulate_deds_process()
     queue_lengths = deds_object.return_recorded_queue_lengths()
     queue_length_times = deds_object.return_recording_time_queue_length()
+    num_to_start_keeping = int(discard_fraction * len(queue_lengths))
+    queue_lengths = queue_lengths[num_to_start_keeping:]
+    queue_length_times = queue_length_times[num_to_start_keeping:]
     return queue_lengths, queue_length_times
 
 

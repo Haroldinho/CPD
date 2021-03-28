@@ -43,7 +43,7 @@ def get_correlation_wait_time(rho, lag):
     return c * integral
 
 
-def compute_batch_variance(m, arrival_rate, service_rate):
+def compute_batch_waiting_times_variance(m, arrival_rate, service_rate):
     """
     Compute the variance of the batch mean wait times
     :param m: the number of batches
@@ -57,13 +57,40 @@ def compute_batch_variance(m, arrival_rate, service_rate):
     return var
 
 
-def compute_lag_one_autocorrelation(samples, service_rate, arrival_rate, batch_size):
+def compute_lag_one_waiting_times_autocorrelation(samples, service_rate, arrival_rate, batch_size):
     rho = arrival_rate / service_rate
     mean = compute_mm1_mean(arrival_rate, service_rate)
-    var = compute_batch_variance(batch_size, arrival_rate, service_rate)
+    var = compute_batch_waiting_times_variance(batch_size, arrival_rate, service_rate)
     last_n_1_elements = np.array(samples[1:]) - mean
     first_n_1_elements = np.array(samples[:-1]) - mean
     return np.dot(first_n_1_elements, last_n_1_elements) / (var * len(last_n_1_elements))
+
+
+def compute_batch_lag_one_queue_length_autocorrelation(samples, service_rate, arrival_rate, batch_size):
+    mean = arrival_rate * arrival_rate / ( service_rate * (service_rate - arrival_rate))
+    last_n_1_elements = np.array(samples[1:]) - mean
+    first_n_1_elements = np.array(samples[:-1]) - mean
+    var = compute_batch_queue_length_variance(batch_size, arrival_rate, service_rate)
+    return np.dot(first_n_1_elements, last_n_1_elements) / (var * len(last_n_1_elements))
+
+
+def compute_batch_queue_length_variance(m, arrival_rate, service_rate):
+    """
+    Compute the variance of the batch mean wait times
+    :param m: the number of batches
+    :param arrival_rate: lambda
+    :param service_rate: mu
+    """
+    pre_multiplier = arrival_rate * service_rate / ((arrival_rate - service_rate) * (arrival_rate - service_rate) * m)
+    corr_sum = 0
+    for i in range(1, m):
+        corr_sum += (1 - i / m) * compute_lag_queue_length_autocorrelation(arrival_rate, service_rate, lag=i)
+    post_multiplier = 1 + 2 * corr_sum
+    return pre_multiplier * post_multiplier
+
+
+def compute_lag_queue_length_autocorrelation(arrival_rate, service_rate, lag=1):
+    return arrival_rate / service_rate + np.exp(- (service_rate - arrival_rate) ** 2 * (lag / arrival_rate))
 
 
 def compute_a(rho):
@@ -135,13 +162,13 @@ def estimate_lag_one_autocorrelation_from_sim(m, rho, mu, sim_type="DEDS", use_n
             # 3. Compute autocorrelation
             # corr = sm.tsa.acf(nobm_wait_times[warm_up_index:], nlags=1, fft=True)
             #             corr = pd.Series(nobm_wait_times[warm_up_index:]).autocorr(lag=1)
-            corr = compute_lag_one_autocorrelation(nobm_wait_times[warm_up_index:], mu, rho * mu, batch_size)
+            corr = compute_lag_one_waiting_times_autocorrelation(nobm_wait_times[warm_up_index:], mu, rho * mu, batch_size)
             mean_wait_times.append(np.mean(nobm_wait_times[warm_up_index:]))
             var_wait_times.append(np.var(nobm_wait_times[warm_up_index:]))
         else:
             start_index = int(0.1 * len(wait_times))
             #             corr = pd.Series(wait_times[start_index:]).autocorr(lag=1)
-            corr = compute_lag_one_autocorrelation(wait_times[start_index:], mu, rho * mu, batch_size)
+            corr = compute_lag_one_waiting_times_autocorrelation(wait_times[start_index:], mu, rho * mu, batch_size)
             mean_wait_times.append(np.mean(wait_times[start_index:]))
             var_wait_times.append(np.var(wait_times[start_index:]))
         # 4. add to avg_autocorrelation
@@ -191,8 +218,8 @@ def main_testing_simulations_off_autocorrelations_lag_1():
     """
     # Compare teh autocorrelation of Kemal to the simulation estimation
     rho = 0.5
-    mu = 10.0
-    batch_size = 10
+    mu = 1.0
+    batch_size = 100
     print("\t\t*** Configuration ***\t\t")
     print("\t batch size={},\t rho={}, mu={}".format(batch_size, rho, mu))
     mean_wait_time = compute_expected_wait_time(rho, mu)

@@ -23,7 +23,7 @@ from batch_means_methods import create_nonoverlapping_batch_means
 from batch_selection import BatchSelectorOnAutocorrelation
 from estimation_facility import GLRTChangePointDetector, DetectionStatistics
 from generate_m_m_1_processes import simulate_ladder_point_process, simulate_deds_return_wait_times, \
-    simulate_deds_return_age, simulate_deds_queue_length
+    simulate_deds_return_age, simulate_deds_return_queue_length
 from plot_output_performance_curve import plot_density_histogram_of_detections
 from utilities import PowerTestLogger
 
@@ -492,9 +492,10 @@ def simulate_changepoints_in_queuelengths_using_r_cpm(data_df: pd.DataFrame, rho
             else:
                 time_of_change = generate_random_change_point_time(end_time, effective_sample_time)
             time_of_changes = [-1, time_of_change]
-            orig_queue_lengths, orig_queue_lengths_ts = simulate_deds_queue_length(start_time, end_time,
-                                                                                   my_arrival_rates, time_of_changes,
-                                                                                   my_service_rates)
+            orig_queue_lengths, orig_queue_lengths_ts = simulate_deds_return_queue_length(start_time, end_time,
+                                                                                          my_arrival_rates,
+                                                                                          time_of_changes,
+                                                                                          my_service_rates)
             # create an artificial warm-up period
             queue_lengths, queue_lengths_ts = disregard_by_length_of_interval(orig_queue_lengths, orig_queue_lengths_ts,
                                                                               end_time,
