@@ -163,7 +163,7 @@ def simulate_single_server_queue_and_compute_ad_wilk_score(start_time, end_time,
             # 3.1     Q-Q plot  Kolmogorov Smirnov
             if run == 1:
                 scipy.stats.probplot(batch_mean_orig_time_samples, plot=plt)
-                plt.title("Batch Wait Times Q-Q plot [batch size={}] ".format(batch_size))
+                plt.title("Batch {} Q-Q plot [batch size={}] ".format(observation_type, batch_size))
                 plt.savefig("./Figures/NormalityTest/QQPlots/QQ_n_{}_{}_{}.png".format(batch_size,
                                                                                        my_arrival_rate,
                                                                                        observation_type),
@@ -398,7 +398,6 @@ def test_independence(batch_sizes, full_corr_df=[]):
 if __name__ == "__main__":
     # Batch sizes to consider
     my_test_batch_sizes = [100, 150, 200, 500, 1000, 2000]
-    #for observation_type in ["wait_times", "age", "queue"]:
-    #    test_normality(my_test_batch_sizes, observation_type)
-    test_independence(my_test_batch_sizes)
-
+    for observation_type in ["wait_times", "age", "queue"]:
+        test_normality(my_test_batch_sizes, observation_type)
+    # test_independence(my_test_batch_sizes)

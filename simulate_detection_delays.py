@@ -23,8 +23,8 @@ from batch_means_methods import create_nonoverlapping_batch_means
 from batch_selection import BatchSelectorOnAutocorrelation
 from estimation_facility import GLRTChangePointDetector, DetectionStatistics
 from generate_m_m_1_processes import simulate_ladder_point_process, simulate_deds_return_wait_times, \
-    simulate_deds_return_age, simulate_deds_return_queue_length
-from plot_output_performance_curve import plot_density_histogram_of_detections
+    simulate_deds_return_age, simulate_deds_return_queue_length, simulate_deds_return_age_queue_wait
+# from plot_output_performance_curve import plot_density_histogram_of_detections
 from utilities import PowerTestLogger
 
 
@@ -284,6 +284,515 @@ def simulate_changepoints_in_waitingtimes_using_r_cpm(data_df: pd.DataFrame, rho
         data_df = data_df.append(row_to_add, ignore_index=True)
         power_delay_log.write_data(data_df)
     return data_df, false_positive_list
+
+
+def simulate_joint_hypothesis_outcome_conditioned_on_change(data_df: pd.DataFrame, rho: List[float],
+                                                            delta_rhos: List[float], arr_rate_0: float, num_runs: int,
+                                                            start_time: float, end_time: float,
+                                                            my_service_rates: List[float], batch_size: List[int],
+                                                            power_delay_log: float, cpm_func):
+    """
+    This code is to use the implementation of CPM in R directly from R using rpy2
+    :param data_df: dataframe that will contain the performance characteristics of the test
+    :param rho: list of intensity ratios
+    :param delta_rhos: list of changes in intensity ratio
+    :param arr_rate_0: initial arrival rate
+    :param num_runs: number of runs
+    :param start_time: start time of the sim 0 by default
+    :param end_time: end time of the sim
+    :param my_service_rates:
+    :param batch_size:
+    :param cpm_func: R wrapper function to cpm
+    :param power_delay_log: used to save data in between runs
+    :return: dataframe of the data_df
+    """
+    # Look at the age, queue, wait outcome given a change
+
+    changepoint_age_pos_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_pos_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_pos_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_pos_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+
+    no_changepoint_age_pos_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_pos_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_pos_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_pos_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    disregard_frac = 0.05
+    effective_sample_time = disregard_frac * end_time
+    # Distribution of time till false detection
+    # just keep a list of all the detection times when you have a false positive
+    num_changes = 0
+    num_no_changes = 0
+    for run_idx in range(num_runs):
+        print(f"Run {run_idx} of {num_runs}")
+        for delta_rho in delta_rhos:
+
+            arr_rate_1 = arr_rate_0 * (1 + delta_rho)
+            my_arrival_rates = [arr_rate_0, arr_rate_1]
+            if delta_rho == 0.0:
+                time_of_change = float('inf')
+            else:
+                time_of_change = generate_random_change_point_time(end_time, effective_sample_time)
+            time_of_changes = [-1, time_of_change]
+            queue_lengths, queue_length_times, mean_age_times, recording_times, wait_times, departure_times = \
+                simulate_deds_return_age_queue_wait(start_time, end_time, my_arrival_rates,
+                                                    time_of_changes, my_service_rates)
+
+            age_of_customers, age_times_ts = disregard_by_length_of_interval(mean_age_times, recording_times, end_time,
+                                                                             disregard_frac)
+            wait_times, wait_times_ts = disregard_by_length_of_interval(wait_times, departure_times, end_time,
+                                                                        disregard_frac)
+            queue_lengths, queue_lengths_ts = disregard_by_length_of_interval(queue_lengths, queue_length_times,
+                                                                              end_time,
+                                                                              disregard_frac)
+            batch_mean_ages, batch_centers_age = create_nonoverlapping_batch_means(age_of_customers, age_times_ts,
+                                                                                   batch_size=batch_size)
+            rbatch_mean_ages = FloatVector(batch_mean_ages)
+            r.assign('remote_batch_mean_wait_times', rbatch_mean_ages)
+            r_estimated_changepoint_age_index = cpm_func.Detect_r_cpm_GaussianChangePoint(batch_mean_ages)
+            batch_mean_wait_times, batch_centers_wait = create_nonoverlapping_batch_means(wait_times, wait_times_ts,
+                                                                                          batch_size=batch_size)
+            rbatch_mean_wait_times = FloatVector(batch_mean_wait_times)
+            r.assign('remote_batch_mean_wait_times', rbatch_mean_wait_times)
+            r_estimated_changepoint_wait_times_index = cpm_func.Detect_r_cpm_GaussianChangePoint(batch_mean_wait_times)
+            batch_queue_lengths, batch_centers_queue = create_nonoverlapping_batch_means(queue_lengths,
+                                                                                         queue_lengths_ts,
+                                                                                         batch_size=batch_size)
+            rbatch_mean_queue_lengths = FloatVector(batch_queue_lengths)
+            r.assign('remote_batch_mean_wait_times', rbatch_mean_queue_lengths)
+            r_estimated_changepoint_queue_index = cpm_func.Detect_r_cpm_GaussianChangePoint(rbatch_mean_queue_lengths)
+            estimated_changepoint_age_idx = r_estimated_changepoint_age_index[0]
+            estimated_changepoint_queue_idx = r_estimated_changepoint_queue_index[0]
+            estimated_changepoint_wait_times_idx = r_estimated_changepoint_wait_times_index[0]
+            is_change_point_triggered_age = estimated_changepoint_age_idx > 0
+            is_change_point_triggered_queue = estimated_changepoint_queue_idx > 0
+            is_change_point_triggered_wait = estimated_changepoint_wait_times_idx > 0
+            if np.isinf(time_of_change):
+                # no changepoint
+                num_no_changes += 1
+                # any detection is a false positive
+                if is_change_point_triggered_age:
+                    if is_change_point_triggered_queue:
+                        if is_change_point_triggered_wait:
+                            no_changepoint_age_pos_queue_pos_wait_pos[delta_rho] += 1
+                        else:
+                            no_changepoint_age_pos_queue_pos_wait_neg[delta_rho] += 1
+                    else:  # no quue change point
+                        if is_change_point_triggered_wait:
+                            no_changepoint_age_pos_queue_neg_wait_pos[delta_rho] += 1
+                        else:
+                            no_changepoint_age_pos_queue_neg_wait_neg[delta_rho] += 1
+                else:  # no ae change point
+                    if is_change_point_triggered_queue:
+                        if is_change_point_triggered_wait:
+                            no_changepoint_age_neg_queue_pos_wait_pos[delta_rho] += 1
+                        else:
+                            no_changepoint_age_neg_queue_pos_wait_neg[delta_rho] += 1
+                    else:  # no queue change point
+                        if is_change_point_triggered_wait:
+                            no_changepoint_age_neg_queue_neg_wait_pos[delta_rho] += 1
+                        else:
+                            no_changepoint_age_neg_queue_neg_wait_neg[delta_rho] += 1
+            else:
+                num_changes += 1
+                # there was a changepoint
+                # still need to check if the changepoint was captured
+                # a change point is captured if the detection time occurs after the event.
+                dd_age = (batch_centers_age[estimated_changepoint_age_idx - 1] - time_of_change) if (
+                        estimated_changepoint_age_idx > 0) else np.nan
+                dd_queue = (batch_centers_queue[estimated_changepoint_queue_idx - 1] - time_of_change) if (
+                        estimated_changepoint_queue_idx > 0) else np.nan
+                dd_wait = (batch_centers_wait[estimated_changepoint_wait_times_idx - 1] - time_of_change) if (
+                        estimated_changepoint_wait_times_idx > 0) else np.nan
+                is_age_correct = False
+                if not np.isnan(dd_age):
+                    if dd_age > 0:
+                        is_age_correct = True
+                is_queue_correct = False
+                if not np.isnan(dd_queue):
+                    if dd_queue > 0:
+                        is_queue_correct = True
+                is_wait_correct = False
+                if not np.isnan(dd_wait):
+                    if dd_wait > 0:
+                        is_wait_correct = True
+                if is_age_correct:
+                    if is_queue_correct:
+                        if is_wait_correct:
+                            changepoint_age_pos_queue_pos_wait_pos[delta_rho] += 1
+                        else:
+                            changepoint_age_pos_queue_pos_wait_neg[delta_rho] += 1
+                    else:
+                        if is_wait_correct:
+                            changepoint_age_pos_queue_neg_wait_pos[delta_rho] += 1
+                        else:
+                            changepoint_age_pos_queue_neg_wait_neg[delta_rho] += 1
+                else:
+                    if is_queue_correct:
+                        if is_wait_correct:
+                            changepoint_age_neg_queue_pos_wait_pos[delta_rho] += 1
+                        else:
+                            changepoint_age_neg_queue_pos_wait_neg[delta_rho] += 1
+                    else:
+                        if is_wait_correct:
+                            changepoint_age_neg_queue_neg_wait_pos[delta_rho] += 1
+                        else:
+                            changepoint_age_neg_queue_neg_wait_neg[delta_rho] += 1
+    for delta_rho in delta_rhos:
+        # Compute the proportions of combination of hypothesis_outcome_given change.
+        prop_correct_age_pos_queue_pos_wait_pos = changepoint_age_pos_queue_pos_wait_pos[delta_rho] / max(num_changes,
+                                                                                                          0.00001)
+        prop_correct_age_pos_queue_pos_wait_neg = changepoint_age_pos_queue_pos_wait_neg[delta_rho] / max(num_changes,
+                                                                                                          0.00001)
+        prop_correct_age_pos_queue_neg_wait_pos = changepoint_age_pos_queue_neg_wait_pos[delta_rho] / max(num_changes,
+                                                                                                          0.00001)
+        prop_correct_age_neg_queue_pos_wait_pos = changepoint_age_neg_queue_pos_wait_pos[delta_rho] / max(num_changes,
+                                                                                                          0.00001)
+
+        prop_correct_age_pos_queue_neg_wait_neg = changepoint_age_pos_queue_neg_wait_neg[delta_rho] / max(num_changes,
+                                                                                                          0.00001)
+        prop_correct_age_neg_queue_neg_wait_pos = changepoint_age_neg_queue_neg_wait_pos[delta_rho] / max(num_changes,
+                                                                                                          0.00001)
+        prop_correct_age_neg_queue_pos_wait_neg = changepoint_age_neg_queue_pos_wait_neg[delta_rho] / max(num_changes,
+                                                                                                          0.00001)
+        prop_correct_age_neg_queue_neg_wait_neg = changepoint_age_neg_queue_neg_wait_neg[delta_rho] / max(num_changes,
+                                                                                                          0.00001)
+
+        prop_incorrect_age_pos_queue_pos_wait_pos = no_changepoint_age_pos_queue_pos_wait_pos[delta_rho] / max(
+            num_no_changes,
+            0.00001)
+        prop_incorrect_age_pos_queue_pos_wait_neg = no_changepoint_age_pos_queue_pos_wait_neg[delta_rho] / max(
+            num_no_changes,
+            0.00001)
+        prop_incorrect_age_pos_queue_neg_wait_pos = no_changepoint_age_pos_queue_neg_wait_pos[delta_rho] / max(
+            num_no_changes,
+            0.00001)
+        prop_incorrect_age_neg_queue_pos_wait_pos = no_changepoint_age_neg_queue_pos_wait_pos[delta_rho] / max(
+            num_no_changes,
+            0.00001)
+
+        prop_incorrect_age_pos_queue_neg_wait_neg = no_changepoint_age_pos_queue_neg_wait_neg[delta_rho] / max(
+            num_no_changes,
+            0.00001)
+        prop_incorrect_age_neg_queue_neg_wait_pos = no_changepoint_age_neg_queue_neg_wait_pos[delta_rho] / max(
+            num_no_changes,
+            0.00001)
+        prop_incorrect_age_neg_queue_pos_wait_neg = no_changepoint_age_neg_queue_pos_wait_neg[delta_rho] / max(
+            num_no_changes,
+            0.00001)
+        prop_incorrect_age_neg_queue_neg_wait_neg = no_changepoint_age_neg_queue_neg_wait_neg[delta_rho] / max(
+            num_no_changes,
+            0.00001)
+        values_to_add = {
+            'Batch Size': batch_size,
+            'rho': rho, 'delta_rho': delta_rho,
+            'A+, Q+, W+ | Change': prop_correct_age_pos_queue_pos_wait_pos,
+            'A+, Q+, W- | Change': prop_correct_age_pos_queue_pos_wait_neg,
+            'A+, Q-, W+ | Change': prop_correct_age_pos_queue_neg_wait_pos,
+            'A-, Q+, W+ | Change': prop_correct_age_neg_queue_pos_wait_pos,
+            'A-, Q+, W- | Change': prop_correct_age_neg_queue_pos_wait_neg,
+            'A-, Q-, W+ | Change': prop_correct_age_neg_queue_neg_wait_pos,
+            'A+, Q-, W- | Change': prop_correct_age_pos_queue_neg_wait_neg,
+            'A-, Q-, W- | Change': prop_correct_age_neg_queue_neg_wait_neg,
+            'A+, Q+, W+ | No Change': prop_incorrect_age_pos_queue_pos_wait_pos,
+            'A+, Q+, W- | No Change': prop_incorrect_age_pos_queue_pos_wait_neg,
+            'A+, Q-, W+ | No Change': prop_incorrect_age_pos_queue_neg_wait_pos,
+            'A-, Q+, W+ | No Change': prop_incorrect_age_neg_queue_pos_wait_pos,
+            'A-, Q+, W- | No Change': prop_incorrect_age_neg_queue_pos_wait_neg,
+            'A-, Q-, W+ | No Change': prop_incorrect_age_neg_queue_neg_wait_pos,
+            'A+, Q-, W- | No Change': prop_incorrect_age_pos_queue_neg_wait_neg,
+            'A-, Q-, W- | No Change': prop_incorrect_age_neg_queue_neg_wait_neg,
+            'Run Length': end_time,
+        }
+        row_to_add = pd.Series(values_to_add)
+        print(row_to_add)
+        data_df = data_df.append(row_to_add, ignore_index=True)
+        power_delay_log.write_data(data_df)
+    return data_df
+
+
+def simulate_joint_change_points_conditioned_on_hypothesis_outcome(data_df: pd.DataFrame, rho: List[float],
+                                                                   delta_rhos: List[float],
+                                                                   arr_rate_0: float, num_runs: int, start_time: float,
+                                                                   end_time: float,
+                                                                   my_service_rates: List[float],
+                                                                   batch_size: List[int], power_delay_log: float,
+                                                                   cpm_func
+                                                                   ):
+    """
+    This code is to use the implementation of CPM in R directly from R using rpy2
+    :param data_df: dataframe that will contain the performance characteristics of the test
+    :param rho: list of intensity ratios
+    :param delta_rhos: list of changes in intensity ratio
+    :param arr_rate_0: initial arrival rate
+    :param num_runs: number of runs
+    :param start_time: start time of the sim 0 by default
+    :param end_time: end time of the sim
+    :param my_service_rates:
+    :param batch_size:
+    :param cpm_func: R wrapper function to cpm
+    :param power_delay_log: used to save data in between runs
+    :return: dataframe of the data_df
+    """
+    # Look at the change given positive age, queue, wait
+    changepoint_age_pos_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_pos_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_pos_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_pos_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+
+    no_changepoint_age_pos_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_pos_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_pos_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_pos_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+
+    disregard_frac = 0.05
+    effective_sample_time = disregard_frac * end_time
+    # Distribution of time till false detection
+    # just keep a list of all the detection times when you have a false positive
+    for run_idx in range(num_runs):
+        print(f"Run {run_idx} of {num_runs}")
+        for delta_rho in delta_rhos:
+            arr_rate_1 = arr_rate_0 * (1 + delta_rho)
+            my_arrival_rates = [arr_rate_0, arr_rate_1]
+            if delta_rho == 0.0:
+                time_of_change = float('inf')
+            else:
+                time_of_change = generate_random_change_point_time(end_time, effective_sample_time)
+            time_of_changes = [-1, time_of_change]
+            queue_lengths, queue_length_times, mean_age_times, recording_times, wait_times, departure_times = \
+                simulate_deds_return_age_queue_wait(start_time, end_time, my_arrival_rates,
+                                                    time_of_changes, my_service_rates)
+
+            age_of_customers, age_times_ts = disregard_by_length_of_interval(mean_age_times, recording_times, end_time,
+                                                                             disregard_frac)
+            wait_times, wait_times_ts = disregard_by_length_of_interval(wait_times, departure_times, end_time,
+                                                                        disregard_frac)
+            queue_lengths, queue_lengths_ts = disregard_by_length_of_interval(queue_lengths, queue_length_times,
+                                                                              end_time,
+                                                                              disregard_frac)
+            batch_mean_ages, batch_centers_age = create_nonoverlapping_batch_means(age_of_customers, age_times_ts,
+                                                                                   batch_size=batch_size)
+            rbatch_mean_ages = FloatVector(batch_mean_ages)
+            r.assign('remote_batch_mean_wait_times', rbatch_mean_ages)
+            r_estimated_changepoint_age_index = cpm_func.Detect_r_cpm_GaussianChangePoint(batch_mean_ages)
+            batch_mean_wait_times, batch_centers_wait = create_nonoverlapping_batch_means(wait_times, wait_times_ts,
+                                                                                          batch_size=batch_size)
+            rbatch_mean_wait_times = FloatVector(batch_mean_wait_times)
+            r.assign('remote_batch_mean_wait_times', rbatch_mean_wait_times)
+            r_estimated_changepoint_wait_times_index = cpm_func.Detect_r_cpm_GaussianChangePoint(batch_mean_wait_times)
+            batch_queue_lengths, batch_centers_queue = create_nonoverlapping_batch_means(queue_lengths,
+                                                                                         queue_lengths_ts,
+                                                                                         batch_size=batch_size)
+            rbatch_mean_queue_lengths = FloatVector(batch_queue_lengths)
+            r.assign('remote_batch_mean_wait_times', rbatch_mean_queue_lengths)
+            r_estimated_changepoint_queue_index = cpm_func.Detect_r_cpm_GaussianChangePoint(rbatch_mean_queue_lengths)
+            estimated_changepoint_age_idx = r_estimated_changepoint_age_index[0]
+            estimated_changepoint_queue_idx = r_estimated_changepoint_queue_index[0]
+            estimated_changepoint_wait_times_idx = r_estimated_changepoint_wait_times_index[0]
+            is_change_point_triggered_age = estimated_changepoint_age_idx > 0
+            is_change_point_triggered_queue = estimated_changepoint_queue_idx > 0
+            is_change_point_triggered_wait = estimated_changepoint_wait_times_idx > 0
+            if np.isinf(time_of_change):
+                # no changepoint
+                # any detection is a false positive
+                if is_change_point_triggered_age:
+                    if is_change_point_triggered_queue:
+                        if is_change_point_triggered_wait:
+                            no_changepoint_age_pos_queue_pos_wait_pos[delta_rho] += 1
+                        else:
+                            no_changepoint_age_pos_queue_pos_wait_neg[delta_rho] += 1
+                    else:  # no quue change point
+                        if is_change_point_triggered_wait:
+                            no_changepoint_age_pos_queue_neg_wait_pos[delta_rho] += 1
+                        else:
+                            no_changepoint_age_pos_queue_neg_wait_neg[delta_rho] += 1
+                else:  # no ae change point
+                    if is_change_point_triggered_queue:
+                        if is_change_point_triggered_wait:
+                            no_changepoint_age_neg_queue_pos_wait_pos[delta_rho] += 1
+                        else:
+                            no_changepoint_age_neg_queue_pos_wait_neg[delta_rho] += 1
+                    else:  # no queue change point
+                        if is_change_point_triggered_wait:
+                            no_changepoint_age_neg_queue_neg_wait_pos[delta_rho] += 1
+                        else:
+                            no_changepoint_age_neg_queue_neg_wait_neg[delta_rho] += 1
+            else:
+                # there was a changepoint
+                # still need to check if the changepoint was captured
+                # a change point is captured if the detection time occurs after the event.
+                dd_age = (batch_centers_age[estimated_changepoint_age_idx - 1] - time_of_change) if (
+                        estimated_changepoint_age_idx > 0) else np.nan
+                dd_queue = (batch_centers_queue[estimated_changepoint_queue_idx - 1] - time_of_change) if (
+                        estimated_changepoint_queue_idx > 0) else np.nan
+                dd_wait = (batch_centers_wait[estimated_changepoint_wait_times_idx - 1] - time_of_change) if (
+                        estimated_changepoint_wait_times_idx > 0) else np.nan
+                is_age_correct = False
+                if not np.isnan(dd_age):
+                    if dd_age > 0:
+                        is_age_correct = True
+                is_queue_correct = False
+                if not np.isnan(dd_queue):
+                    if dd_queue > 0:
+                        is_queue_correct = True
+                is_wait_correct = False
+                if not np.isnan(dd_wait):
+                    if dd_wait > 0:
+                        is_wait_correct = True
+                if is_age_correct:
+                    if is_queue_correct:
+                        if is_wait_correct:
+                            changepoint_age_pos_queue_pos_wait_pos[delta_rho] += 1
+                        else:
+                            changepoint_age_pos_queue_pos_wait_neg[delta_rho] += 1
+                    else:
+                        if is_wait_correct:
+                            changepoint_age_pos_queue_neg_wait_pos[delta_rho] += 1
+                        else:
+                            changepoint_age_pos_queue_neg_wait_neg[delta_rho] += 1
+                else:
+                    if is_queue_correct:
+                        if is_wait_correct:
+                            changepoint_age_neg_queue_pos_wait_pos[delta_rho] += 1
+                        else:
+                            changepoint_age_neg_queue_pos_wait_neg[delta_rho] += 1
+                    else:
+                        if is_wait_correct:
+                            changepoint_age_neg_queue_neg_wait_pos[delta_rho] += 1
+                        else:
+                            changepoint_age_neg_queue_neg_wait_neg[delta_rho] += 1
+    for delta_rho in delta_rhos:
+        # Compute the proportions of correct detection given the different combinations of detections.
+        prop_correct_age_pos_queue_pos_wait_pos = changepoint_age_pos_queue_pos_wait_pos[delta_rho] / max((
+                changepoint_age_pos_queue_pos_wait_pos[delta_rho]
+                +
+                no_changepoint_age_pos_queue_pos_wait_pos[delta_rho]
+        ), 0.00001)
+
+        prop_incorrect_age_pos_queue_pos_wait_pos = no_changepoint_age_pos_queue_pos_wait_pos[delta_rho] / max((
+                changepoint_age_pos_queue_pos_wait_pos[delta_rho]
+                +
+                no_changepoint_age_pos_queue_pos_wait_pos[delta_rho]
+        ), 0.0001)
+        prop_correct_age_pos_queue_pos_wait_neg = changepoint_age_pos_queue_pos_wait_neg[delta_rho] / max((
+                changepoint_age_pos_queue_pos_wait_neg[delta_rho]
+                +
+                no_changepoint_age_pos_queue_pos_wait_neg[delta_rho]
+        ), 0.0001)
+
+        prop_incorrect_age_pos_queue_pos_wait_neg = no_changepoint_age_pos_queue_pos_wait_neg[delta_rho] / max((
+                changepoint_age_pos_queue_pos_wait_neg[delta_rho]
+                +
+                no_changepoint_age_pos_queue_pos_wait_neg[delta_rho]
+        ), 0.0001)
+        prop_correct_age_pos_queue_neg_wait_pos = changepoint_age_pos_queue_neg_wait_pos[delta_rho] / max((
+                changepoint_age_pos_queue_neg_wait_pos[delta_rho]
+                +
+                no_changepoint_age_pos_queue_neg_wait_pos[delta_rho]
+        ), 0.0001)
+
+        prop_incorrect_age_pos_queue_neg_wait_pos = no_changepoint_age_pos_queue_neg_wait_pos[delta_rho] / max((
+                changepoint_age_pos_queue_neg_wait_pos[delta_rho]
+                +
+                no_changepoint_age_pos_queue_neg_wait_pos[delta_rho]
+        ), 0.0001)
+        prop_correct_age_pos_queue_neg_wait_neg = changepoint_age_pos_queue_neg_wait_neg[delta_rho] / max((
+                changepoint_age_pos_queue_neg_wait_neg[delta_rho]
+                +
+                no_changepoint_age_pos_queue_neg_wait_neg[delta_rho]
+        ), 0.0001)
+
+        prop_incorrect_age_pos_queue_neg_wait_neg = no_changepoint_age_pos_queue_neg_wait_neg[delta_rho] / max((
+                changepoint_age_pos_queue_neg_wait_neg[delta_rho]
+                +
+                no_changepoint_age_pos_queue_neg_wait_neg[delta_rho]
+        ), 0.0001)
+        prop_correct_age_neg_queue_pos_wait_pos = changepoint_age_neg_queue_pos_wait_pos[delta_rho] / max((
+                changepoint_age_neg_queue_pos_wait_pos[delta_rho]
+                +
+                no_changepoint_age_neg_queue_pos_wait_pos[delta_rho]
+        ), 0.0001)
+
+        prop_incorrect_age_neg_queue_pos_wait_pos = no_changepoint_age_neg_queue_pos_wait_pos[delta_rho] / max((
+                changepoint_age_neg_queue_pos_wait_pos[delta_rho]
+                +
+                no_changepoint_age_neg_queue_pos_wait_pos[delta_rho]
+        ), 0.0001)
+        prop_correct_age_neg_queue_pos_wait_neg = changepoint_age_neg_queue_pos_wait_neg[delta_rho] / max((
+                changepoint_age_neg_queue_pos_wait_neg[delta_rho]
+                +
+                no_changepoint_age_neg_queue_pos_wait_neg[delta_rho]
+        ), 0.0001)
+
+        prop_incorrect_age_neg_queue_pos_wait_neg = no_changepoint_age_neg_queue_pos_wait_neg[delta_rho] / max((
+                changepoint_age_neg_queue_pos_wait_neg[delta_rho]
+                +
+                no_changepoint_age_neg_queue_pos_wait_neg[delta_rho]
+        ), 0.0001)
+        prop_correct_age_neg_queue_neg_wait_pos = changepoint_age_neg_queue_neg_wait_pos[delta_rho] / max((
+                changepoint_age_neg_queue_neg_wait_pos[delta_rho]
+                +
+                no_changepoint_age_neg_queue_neg_wait_pos[delta_rho]
+        ), 0.0001)
+
+        prop_incorrect_age_neg_queue_neg_wait_pos = no_changepoint_age_neg_queue_neg_wait_pos[delta_rho] / max((
+                changepoint_age_neg_queue_neg_wait_pos[delta_rho]
+                +
+                no_changepoint_age_neg_queue_neg_wait_pos[delta_rho]
+        ), 0.0001)
+        prop_correct_age_neg_queue_neg_wait_neg = changepoint_age_neg_queue_neg_wait_neg[delta_rho] / max((
+                changepoint_age_neg_queue_neg_wait_neg[delta_rho]
+                +
+                no_changepoint_age_neg_queue_neg_wait_neg[delta_rho]
+        ), 0.0001)
+
+        prop_incorrect_age_neg_queue_neg_wait_neg = no_changepoint_age_neg_queue_neg_wait_neg[delta_rho] / max((
+                changepoint_age_neg_queue_neg_wait_neg[delta_rho]
+                +
+                no_changepoint_age_neg_queue_neg_wait_neg[delta_rho]
+        ), 0.0001)
+        values_to_add = {
+            'Batch Size': batch_size,
+            'rho': rho, 'delta_rho': delta_rho,
+            'Change | A+, Q+, W+': prop_correct_age_pos_queue_pos_wait_pos,
+            'Change | A+, Q+, W-': prop_correct_age_pos_queue_pos_wait_neg,
+            'Change | A+, Q-, W+': prop_correct_age_pos_queue_neg_wait_pos,
+            'Change | A-, Q+, W+': prop_correct_age_neg_queue_pos_wait_pos,
+            'Change | A-, Q+, W-': prop_correct_age_neg_queue_pos_wait_neg,
+            'Change | A-, Q-, W+': prop_correct_age_neg_queue_neg_wait_pos,
+            'Change | A+, Q-, W-': prop_correct_age_pos_queue_neg_wait_neg,
+            'Change | A-, Q-, W-': prop_correct_age_neg_queue_neg_wait_neg,
+            'No Change | A+, Q+, W+': prop_incorrect_age_pos_queue_pos_wait_pos,
+            'No Change | A+, Q+, W-': prop_incorrect_age_pos_queue_pos_wait_neg,
+            'No Change | A+, Q-, W+': prop_incorrect_age_pos_queue_neg_wait_pos,
+            'No Change | A-, Q+, W+': prop_incorrect_age_neg_queue_pos_wait_pos,
+            'No Change | A-, Q+, W-': prop_incorrect_age_neg_queue_pos_wait_neg,
+            'No Change | A-, Q-, W+': prop_incorrect_age_neg_queue_neg_wait_pos,
+            'No Change | A+, Q-, W-': prop_incorrect_age_pos_queue_neg_wait_neg,
+            'No Change | A-, Q-, W-': prop_incorrect_age_neg_queue_neg_wait_neg,
+            'Run Length': end_time,
+        }
+        row_to_add = pd.Series(values_to_add)
+        print(row_to_add)
+        data_df = data_df.append(row_to_add, ignore_index=True)
+        power_delay_log.write_data(data_df)
+    return data_df
 
 
 def simulate_change_points_in_age_process(data_df: pd.DataFrame, rho: List[float], delta_rhos: List[float],
@@ -959,7 +1468,7 @@ def simulate_detection_delay_by_rho_batch_on_auto_correlation(data_df, auto_corr
         row_to_add = pd.Series(values_to_add)
         # print(row_to_add)
         data_df = data_df.append(row_to_add, ignore_index=True)
-    plot_density_histogram_of_detections(is_true_changes_vec, likelihood_vec, title=f"rho={rho}, deltarho={delta_rho}")
+    # plot_density_histogram_of_detections(is_true_changes_vec, likelihood_vec, title=f"rho={rho}, deltarho={delta_rho}")
     return data_df
 
 
@@ -1755,6 +2264,44 @@ def main_process_queue_length_rcpm(batch_size, is_parametric=True):
                     index=False)
 
 
+def main_process_joint_observations(batch_size):
+    rhos = [0.25, 0.5, 0.75]
+    delta_rho = [-0.5, -0.25, 0, 0.25, 0.5, 0.75, 1.0, 1.2]
+    start_time = 0
+    end_time = 1e5
+    num_runs = 1000
+    log_directory = "./Results/GLRT_ROSS/Performance_Tests/Logs/"
+    log_file_name = log_directory + "joint_tests_log_"
+    data_store = pd.DataFrame()
+    mu = 1.0
+    power_delay_log = PowerTestLogger(log_file_name, is_full_path=False, file_type="bz2", dataframe=data_store)
+    # Personal Machine
+    print(R_VERSION_BUILD)
+    cpm = importr("cpm", lib_loc="C:/Users/swaho/OneDrive/Documents/R/win-library/3.6")
+    with open('detectChangePointwithCPM.R', 'r') as f:
+        r_string = f.read()
+    cpm_func = STAP(r_string, "Detect_r_cpm_GaussianChangePoint")
+    for rho in rhos:
+        arr_rate_0 = mu * rho
+        my_service_rates = [mu, mu]
+        #        data_store = simulate_joint_change_points_conditioned_on_hypothesis_outcome(data_store, rho, delta_rho, arr_rate_0, num_runs,
+        #                                                                                    start_time, end_time, my_service_rates, batch_size, power_delay_log,
+        #                                                                                    cpm_func)
+        #        data_store.to_csv(
+        #            "./Results/GLRT_ROSS/Performance_Tests/ChangePoint_Conditioned_on_HypothesisOutcome/" +
+        #            "JointDetection_Batch_of_size_{}_rho{}_rcpm.csv".format(batch_size, rho * 100),
+        #            index=False)
+
+        data_store = simulate_joint_hypothesis_outcome_conditioned_on_change(data_store, rho, delta_rho, arr_rate_0,
+                                                                             num_runs, start_time, end_time,
+                                                                             my_service_rates, batch_size,
+                                                                             power_delay_log, cpm_func)
+        data_store.to_csv(
+            "./Results/GLRT_ROSS/Performance_Tests/Hypothesis_Conditioned_on_Change/" +
+            "JointDetection_Batch_of_size_{}_rho{}_rcpm.csv".format(batch_size, rho * 100),
+            index=False)
+
+
 if __name__ == "__main__":
     # Test with autocorrelation results
     # main_3()
@@ -1773,11 +2320,16 @@ if __name__ == "__main__":
     #     main_process_queue_length_rcpm(200)
     #     main_process_queue_length_rcpm(500)
     #     main_process_queue_length_rcpm(1000, is_parametric=True)
-    main_process_age_rcpm(100)
-    main_process_age_rcpm(200)
-    main_process_age_rcpm(500)
-    main_process_age_rcpm(1000, is_parametric=True)
-    main_process_queue_length_rcpm(100)
-    main_process_queue_length_rcpm(200)
-    main_process_queue_length_rcpm(500)
-    main_process_queue_length_rcpm(1000, is_parametric=True)
+    #     main_process_age_rcpm(100)
+    #     main_process_age_rcpm(200)
+    #     main_process_age_rcpm(500)
+    #     main_process_age_rcpm(1000, is_parametric=True)
+    #     main_process_queue_length_rcpm(100)
+    #     main_process_queue_length_rcpm(200)
+    #     main_process_queue_length_rcpm(500)
+    #     main_process_queue_length_rcpm(1000, is_parametric=True)
+    main_process_joint_observations(100)
+    main_process_joint_observations(200)
+    main_process_joint_observations(500)
+    main_process_joint_observations(1000)
+    main_process_joint_observations(2000)

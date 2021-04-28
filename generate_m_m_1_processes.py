@@ -133,6 +133,23 @@ def simulate_deds_return_queue_length(start_time, end_time, my_arrival_rates, ti
     return queue_lengths, queue_length_times
 
 
+def simulate_deds_return_age_queue_wait(start_time, end_time, my_arrival_rates, time_of_changes, my_service_rates,
+                                        discard_fraction=0.1, warm_up_time=None):
+    deds_object = SingleServerMarkovianQueue(start_time, end_time, my_arrival_rates, time_of_changes,
+                                             my_service_rates, time_of_changes)
+    if warm_up_time:
+        wait_times = deds_object.simulate_deds_process(warm_up=warm_up_time)
+    else:
+        wait_times = deds_object.simulate_deds_process()
+    queue_lengths = deds_object.return_recorded_queue_lengths()
+    queue_length_times = deds_object.return_recording_time_queue_length()
+    recording_times = deds_object.return_recording_times_age()
+    mean_age_times = deds_object.return_mean_process_age()
+    departure_times = deds_object.get_recorded_times()
+    num_to_start_keeping = int(discard_fraction * len(wait_times))
+    return queue_lengths, queue_length_times, mean_age_times, recording_times, wait_times, departure_times
+
+
 class LadderPointQueue:
     """
     Class used to compute wait times and idle times between the M/M/1 queue as a Ladder point process

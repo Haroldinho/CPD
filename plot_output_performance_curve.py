@@ -279,19 +279,29 @@ def plot_roc_param_all_delta_rhos(observation_type="Wait_Times", selected_rho=0.
     if selected_rho in list(results_df["rho"].unique()):
         results_df = results_df[results_df["rho"] == selected_rho]
     batch_sizes = list(results_df["batch size"].unique())
-    for batch in batch_sizes:
-        reduced_df = results_df[results_df["batch size"] == batch]
-        plt.figure()
-        sns.scatterplot(data=reduced_df, x="fp_rate", y="tp_rate", size="delta_rho")
-        #        plt.plot(reduced_df["fp_rate"], reduced_df["tp_rate"], 'o-')
-        #        plt.xlabel("fpR")
-        #        plt.ylabel("tpR")
-        axes = plt.gca()
-        axes.set_xlim([0, 1.05])
-        axes.set_ylim([0, 1.05])
-        plt.title(f"ROC Batch of Size: {batch}")
-        plt.savefig(file_name_prefix + "ROC_parametric_batch_{}_rho0pt5.png".format(int(batch)))
-        plt.close()
+    plt.figure()
+    sns.scatterplot(data=results_df, x="fp_rate", y="tp_rate", size="delta_rho", hue="batch size")
+    axes = plt.gca()
+    axes.set_xlim([0, 1.05])
+    axes.set_ylim([0, 1.05])
+    plt.title("ROC")
+    plt.savefig(file_name_prefix + "ROC_parametric_rho_{}.png".format(int(selected_rho * 100)))
+    plt.close()
+
+
+#     for batch in batch_sizes:
+#         reduced_df = results_df[results_df["batch size"] == batch]
+#         plt.figure()
+#         sns.scatterplot(data=reduced_df, x="fp_rate", y="tp_rate", size="delta_rho")
+#         #        plt.plot(reduced_df["fp_rate"], reduced_df["tp_rate"], 'o-')
+#         #        plt.xlabel("fpR")
+#         #        plt.ylabel("tpR")
+#         axes = plt.gca()
+#         axes.set_xlim([0, 1.05])
+#         axes.set_ylim([0, 1.05])
+#         plt.title(f"ROC Batch of Size: {batch}")
+#         plt.savefig(file_name_prefix + "ROC_parametric_batch_{}_rho0pt5.png".format(int(batch)))
+#         plt.close()
 
 
 def plot_correct_vs_arl1_param_all_delta_rhos(observation_type="Wait_Times", selected_rho=0.5):
@@ -472,6 +482,14 @@ if __name__ == "__main__":
     #     main_simple_test(results_df)
     #     results_df = pd.read_csv("SimpleDetection_Batch_of_size_1000_rcpm.csv")
     #     main_simple_test(results_df)
-    plot_correct_vs_arl1_param_all_delta_rhos("Queue", selected_rho=0.25)
+    # plot_correct_vs_arl1_param_all_delta_rhos("Queue", selected_rho=0.25)
     plot_roc_param_all_delta_rhos("Queue", selected_rho=0.25)
-    plot_corrections(is_parametric=True, observation_type="Queue", selected_rho=0.25)
+    plot_roc_param_all_delta_rhos("Queue", selected_rho=0.5)
+    plot_roc_param_all_delta_rhos("Queue", selected_rho=0.75)
+    plot_roc_param_all_delta_rhos("Wait_Times", selected_rho=0.25)
+    plot_roc_param_all_delta_rhos("Wait_Times", selected_rho=0.5)
+    plot_roc_param_all_delta_rhos("Wait_Times", selected_rho=0.75)
+    plot_roc_param_all_delta_rhos("Age", selected_rho=0.25)
+    plot_roc_param_all_delta_rhos("Age", selected_rho=0.5)
+    plot_roc_param_all_delta_rhos("Age", selected_rho=0.75)
+    # plot_corrections(is_parametric=True, observation_type="Queue", selected_rho=0.25)
