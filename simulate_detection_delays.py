@@ -9,7 +9,6 @@ import random
 from collections import defaultdict
 from enum import Enum, unique, auto
 from typing import List
-from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,6 +17,7 @@ from rpy2.rinterface import R_VERSION_BUILD
 from rpy2.robjects import FloatVector, r
 from rpy2.robjects.packages import STAP
 from rpy2.robjects.packages import importr
+from tqdm import tqdm
 
 from average_run_length_loader import ThresholdSelector
 from batch_means_methods import create_nonoverlapping_batch_means
@@ -2342,16 +2342,20 @@ if __name__ == "__main__":
     #     main_wait_times_simple_rcpm(100, is_parametric=False)
     #     main_wait_times_simple_rcpm(150, is_parametric=False)
     #     main_wait_times_simple_rcpm(200, is_parametric=False)
-    #     main_wait_times_simple_rcpm(500, is_parametric=False)
+    main_wait_times_simple_rcpm(1500, is_parametric=True)
+    main_wait_times_simple_rcpm(2000, is_parametric=True)
     #     main_wait_times_simple_rcpm(1000, is_parametric=False)
     #     main_process_age_rcpm(100)
     #     main_process_age_rcpm(200)
     #     main_process_age_rcpm(500)
-    #     main_process_age_rcpm(1000, is_parametric=True)
+    main_process_age_rcpm(1500, is_parametric=True)
+    main_process_age_rcpm(2000, is_parametric=True)
     #     main_process_queue_length_rcpm(100)
     #     main_process_queue_length_rcpm(200)
     #     main_process_queue_length_rcpm(500)
     #     main_process_queue_length_rcpm(1000, is_parametric=True)
+    main_process_queue_length_rcpm(1500, is_parametric=True)
+    main_process_queue_length_rcpm(2000, is_parametric=True)
     #     main_process_age_rcpm(100)
     #     main_process_age_rcpm(200)
     #     main_process_age_rcpm(500)
@@ -2360,8 +2364,8 @@ if __name__ == "__main__":
     #     main_process_queue_length_rcpm(200)
     #     main_process_queue_length_rcpm(500)
     #     main_process_queue_length_rcpm(1000, is_parametric=True)
-    main_process_joint_observations(100)
-    main_process_joint_observations(200)
-    main_process_joint_observations(500)
-    main_process_joint_observations(1000)
-    main_process_joint_observations(2000)
+#     main_process_joint_observations(100)
+#     main_process_joint_observations(200)
+#     main_process_joint_observations(500)
+#     main_process_joint_observations(1000)
+#     main_process_joint_observations(2000)

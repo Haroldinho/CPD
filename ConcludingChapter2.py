@@ -21,7 +21,7 @@ import pandas as pd
 # Steps
 # Step 1: Load conditional probability of all combinations of outcome given a changepoint or no changepoint
 
-main_file_name = "./Results/GLRT_ROSS/Performance_Tests/joint_conditional_probability.csv"
+main_file_name = "./Results/GLRT_ROSS/Performance_Tests/joint_conditional_probability_2.csv"
 joint_cond_prob_df = pd.read_csv(main_file_name)
 
 # Step 2: Reduce the dataframe only to single conditional outcomes
@@ -100,6 +100,8 @@ print("Columns of full_wait_df: ", full_wait_df.columns)
 # Iterate over all rhos and delta rhos
 list_of_rhos = list(cond_prob_df["rho"].unique())
 list_of_delta_rhos = list(cond_prob_df["delta_rho"].unique())
+# ignore delta_rho==0
+list_of_delta_rhos = [drho for drho in list_of_delta_rhos if drho > 0]
 idx = 0
 list_of_parameters = []
 selected_combinations_A = []
@@ -148,9 +150,9 @@ for rho in list_of_rhos:
         list_of_parameters.append((rho, delta_rho))
         idx += 1
         local_df = cond_prob_df[(cond_prob_df["rho"] == rho) & (cond_prob_df["delta_rho"] == delta_rho)]
-        selected_df_A = local_df[local_df["ErrorTypeI_A"] <= 0.05]
-        selected_df_Q = local_df[local_df["ErrorTypeI_Q"] <= 0.05]
-        selected_df_W = local_df[local_df["ErrorTypeI_W"] <= 0.05]
+        selected_df_A = local_df[local_df["ErrorTypeII_A"] <= 0.05]
+        selected_df_Q = local_df[local_df["ErrorTypeII_Q"] <= 0.05]
+        selected_df_W = local_df[local_df["ErrorTypeII_W"] <= 0.05]
         if len(selected_df_A) == 0:
             print(
                 f"For rho={rho} and delta_rho={delta_rho}, there is no test that satisfies the FAR requirement for the age of a process.")
@@ -248,6 +250,29 @@ for rho in list_of_rhos:
                     best_batch_size_option3_W.append(selected_row[0])
                 lowest_ARL_1_W.append(min_ARL_1)
             z_dic_of_dic_batch_option_3_W[rho][delta_rho] = best_batch_size_option3_W[-1]
+
+# Create relevant dataframe
+option_1_A_df = pd.DataFrame(z_dic_of_dic_batch_option_1_A)
+option_1_W_df = pd.DataFrame(z_dic_of_dic_batch_option_1_W)
+option_1_Q_df = pd.DataFrame(z_dic_of_dic_batch_option_1_Q)
+option_2_A_df = pd.DataFrame(z_dic_of_dic_batch_option_2_A)
+option_2_W_df = pd.DataFrame(z_dic_of_dic_batch_option_2_W)
+option_2_Q_df = pd.DataFrame(z_dic_of_dic_batch_option_2_Q)
+option_3_A_df = pd.DataFrame(z_dic_of_dic_batch_option_3_A)
+option_3_W_df = pd.DataFrame(z_dic_of_dic_batch_option_3_W)
+option_3_Q_df = pd.DataFrame(z_dic_of_dic_batch_option_3_Q)
+excel_file = "Results/Chapter2ContourPlots/bestBatch_results.xlsx"
+with pd.ExcelWriter(excel_file) as writer:
+    option_1_A_df.to_excel(writer, sheet_name="Age_FAR")
+    option_1_Q_df.to_excel(writer, sheet_name="Queue_FAR")
+    option_1_W_df.to_excel(writer, sheet_name="Wait_FAR")
+    option_2_A_df.to_excel(writer, sheet_name="Age_FN")
+    option_2_Q_df.to_excel(writer, sheet_name="Queue_FN")
+    option_2_W_df.to_excel(writer, sheet_name="Wait_FN")
+    option_3_A_df.to_excel(writer, sheet_name="Age_ARL1")
+    option_3_Q_df.to_excel(writer, sheet_name="Queue_ARL1")
+    option_3_W_df.to_excel(writer, sheet_name="Wait_ARL1")
+
 print("------------------------------ Age of Process --------------------------------")
 print("All parameters:", list_of_parameters)
 print("Parameters with a combination: ", selected_combinations_A)
@@ -261,7 +286,7 @@ print("Combinations not represented: ", combination_not_represented)
 print("------------------------------------------------------------------------------")
 
 print("------------------------------ Waiting Times --------------------------------")
-print("Wll parameters:", list_of_parameters)
+print("All parameters:", list_of_parameters)
 print("Parameters with a combination: ", selected_combinations_W)
 print("Option 1:")
 print("\t batch sizes: ", best_batch_size_option1_W)
@@ -291,8 +316,8 @@ print("-------------------------------------------------------------------------
 
 # Create a dataframe of the results for different rho and delta rhos
 # For age: A
-x_list_of_rho_A = list(set([age_idx[0] for age_idx in selected_combinations_A]))
-y_list_of_delta_rho_A = list(set([age_idx[1] for age_idx in selected_combinations_A]))
+x_list_of_rho_A = sorted(list(set([age_idx[0] for age_idx in selected_combinations_A])))
+y_list_of_delta_rho_A = sorted(list(set([age_idx[1] for age_idx in selected_combinations_A])))
 
 # convert the dataframe into a matrix
 z_list_of_list_batch_option_1_A = []
@@ -316,8 +341,8 @@ for delta_rho in y_list_of_delta_rho_A:
     z_list_of_list_batch_option_3_A.append(z_inner_list_3)
 
 # For Queue
-x_list_of_rho_Q = list(set([age_idx[0] for age_idx in selected_combinations_Q]))
-y_list_of_delta_rho_Q = list(set([age_idx[1] for age_idx in selected_combinations_Q]))
+x_list_of_rho_Q = sorted(list(set([age_idx[0] for age_idx in selected_combinations_Q])))
+y_list_of_delta_rho_Q = sorted(list(set([age_idx[1] for age_idx in selected_combinations_Q])))
 
 # convert the dataframe into a matrix
 z_list_of_list_batch_option_1_Q = []
@@ -341,8 +366,8 @@ for delta_rho in y_list_of_delta_rho_Q:
     z_list_of_list_batch_option_3_Q.append(z_inner_list_3)
 
 # For Waiting-Times
-x_list_of_rho_W = list(set([age_idx[0] for age_idx in selected_combinations_W]))
-y_list_of_delta_rho_W = list(set([age_idx[1] for age_idx in selected_combinations_W]))
+x_list_of_rho_W = sorted(list(set([age_idx[0] for age_idx in selected_combinations_W])))
+y_list_of_delta_rho_W = sorted(list(set([age_idx[1] for age_idx in selected_combinations_W])))
 
 # convert the dataframe into a matrix
 z_list_of_list_batch_option_1_W = []
@@ -392,20 +417,26 @@ def heatmap_for_batches(z_mat, x_list, y_list, plot_name):
 
 
 heatmap_for_batches(z_list_of_list_batch_option_2_A, x_list_of_rho_A, y_list_of_delta_rho_A,
-                    "Results/Chapter2ContourPlots/TypeIIMinBatchSizeAgeProcess.png")
-heatmap_for_batches(z_list_of_list_batch_option_1_A, x_list_of_rho_A, y_list_of_delta_rho_A,
                     "Results/Chapter2ContourPlots/TypeIMinBatchSizeAgeProcess.png")
+heatmap_for_batches(z_list_of_list_batch_option_1_A, x_list_of_rho_A, y_list_of_delta_rho_A,
+                    "Results/Chapter2ContourPlots/TypeIIMinBatchSizeAgeProcess.png")
 heatmap_for_batches(z_list_of_list_batch_option_3_A, x_list_of_rho_A, y_list_of_delta_rho_A,
                     "Results/Chapter2ContourPlots/DetectionDelayMinBatchSizeAgeProcess.png")
-heatmap_for_batches(z_list_of_list_batch_option_2_Q, x_list_of_rho_Q, y_list_of_delta_rho_Q,
-                    "Results/Chapter2ContourPlots/TypeIIMinBatchSizeQueueLength.png")
-heatmap_for_batches(z_list_of_list_batch_option_1_Q, x_list_of_rho_Q, y_list_of_delta_rho_Q,
-                    "Results/Chapter2ContourPlots/TypeIMinBatchSizeQueueLength.png")
-heatmap_for_batches(z_list_of_list_batch_option_3_Q, x_list_of_rho_Q, y_list_of_delta_rho_Q,
-                    "Results/Chapter2ContourPlots/DetectionDelayMinBatchSizeQueueLength.png")
-heatmap_for_batches(z_list_of_list_batch_option_2_W, x_list_of_rho_W, y_list_of_delta_rho_W,
-                    "Results/Chapter2ContourPlots/TypeIIMinBatchSizeWaitTime.png")
-heatmap_for_batches(z_list_of_list_batch_option_1_W, x_list_of_rho_W, y_list_of_delta_rho_W,
-                    "Results/Chapter2ContourPlots/TypeIMinBatchSizeWaitTime.png")
-heatmap_for_batches(z_list_of_list_batch_option_3_W, x_list_of_rho_W, y_list_of_delta_rho_W,
-                    "Results/Chapter2ContourPlots/DetectionDelayMinBatchSizeWaitTime.png")
+if z_list_of_list_batch_option_1_Q:
+    heatmap_for_batches(z_list_of_list_batch_option_1_Q, x_list_of_rho_Q, y_list_of_delta_rho_Q,
+                        "Results/Chapter2ContourPlots/TypeIIMinBatchSizeQueueLength.png")
+if z_list_of_list_batch_option_1_W:
+    heatmap_for_batches(z_list_of_list_batch_option_1_W, x_list_of_rho_W, y_list_of_delta_rho_W,
+                        "Results/Chapter2ContourPlots/TypeIIMinBatchSizeWaitTime.png")
+if z_list_of_list_batch_option_2_Q:
+    heatmap_for_batches(z_list_of_list_batch_option_2_Q, x_list_of_rho_Q, y_list_of_delta_rho_Q,
+                        "Results/Chapter2ContourPlots/TypeIMinBatchSizeQueueLength.png")
+if z_list_of_list_batch_option_3_Q:
+    heatmap_for_batches(z_list_of_list_batch_option_3_Q, x_list_of_rho_Q, y_list_of_delta_rho_Q,
+                        "Results/Chapter2ContourPlots/DetectionDelayMinBatchSizeQueueLength.png")
+if z_list_of_list_batch_option_2_W:
+    heatmap_for_batches(z_list_of_list_batch_option_2_W, x_list_of_rho_W, y_list_of_delta_rho_W,
+                        "Results/Chapter2ContourPlots/TypeIMinBatchSizeWaitTime.png")
+if z_list_of_list_batch_option_3_W:
+    heatmap_for_batches(z_list_of_list_batch_option_3_W, x_list_of_rho_W, y_list_of_delta_rho_W,
+                        "Results/Chapter2ContourPlots/DetectionDelayMinBatchSizeWaitTime.png")
