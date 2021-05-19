@@ -860,8 +860,8 @@ def simulate_change_points_in_age_process(data_df: pd.DataFrame, rho: List[float
     # Distribution of time till false detection
     # just keep a list of all the detection times when you have a false positive
     false_positive_list = []
-    for run_idx in range(num_runs):
-        print(f"Run {run_idx} of {num_runs}")
+    for run_idx in tqdm(range(num_runs)):
+        # print(f"Run {run_idx} of {num_runs}")
         for delta_rho in delta_rhos:
             arr_rate_1 = arr_rate_0 * (1 + delta_rho)
             my_arrival_rates = [arr_rate_0, arr_rate_1]
@@ -897,8 +897,8 @@ def simulate_change_points_in_age_process(data_df: pd.DataFrame, rho: List[float
                         try:
                             estimated_changepoint = batch_centers[estimated_changepoint_idx]
                         except IndexError:
-                            print(
-                                f"Estimated changepoint idx {estimated_changepoint_idx} vs. array of length {len(batch_centers)}")
+                            #                             print(
+                            #                                 f"Estimated changepoint idx {estimated_changepoint_idx} vs. array of length {len(batch_centers)}")
                             raise
                     else:
                         estimated_changepoint = age_times_ts[estimated_changepoint_idx]
@@ -917,7 +917,7 @@ def simulate_change_points_in_age_process(data_df: pd.DataFrame, rho: List[float
                                 f"Estimated changepoint idx {estimated_changepoint_idx} vs. array of length {len(batch_centers)}")
                     else:
                         estimated_changepoint = age_times_ts[estimated_changepoint_idx]
-                    print(f"Estimated change point location: {estimated_changepoint} vs actual {time_of_change} ")
+                    #                     print(f"Estimated change point location: {estimated_changepoint} vs actual {time_of_change} ")
                     detection_delay = estimated_changepoint - time_of_change
                     if detection_delay >= 0:
                         true_positive[delta_rho] += 1
@@ -1023,8 +1023,8 @@ def simulate_changepoints_in_queuelengths_using_r_cpm(data_df: pd.DataFrame, rho
     disregard_frac = 0.05
     effective_sample_time = disregard_frac * end_time
     false_positive_list = []
-    for run_idx in range(num_runs):
-        print(f"run {run_idx} of {num_runs}")
+    for run_idx in tqdm(range(num_runs)):
+        #         print(f"run {run_idx} of {num_runs}")
         for delta_rho in delta_rhos:
             arr_rate_1 = arr_rate_0 * (1 + delta_rho)
             my_arrival_rates = [arr_rate_0, arr_rate_1]
@@ -1084,7 +1084,7 @@ def simulate_changepoints_in_queuelengths_using_r_cpm(data_df: pd.DataFrame, rho
                                 f"estimated changepoint idx {estimated_changepoint_idx} vs. array of length {len(batch_centers)}")
                     else:
                         estimated_changepoint = queue_lengths_ts[estimated_changepoint_idx]
-                    print(f"estimated change point location: {estimated_changepoint} vs actual {time_of_change} ")
+                    #                     print(f"estimated change point location: {estimated_changepoint} vs actual {time_of_change} ")
                     detection_delay = estimated_changepoint - time_of_change
                     if detection_delay >= 0:
                         true_positive[delta_rho] += 1
@@ -2230,16 +2230,16 @@ def main_process_age_rcpm(batch_size, is_parametric=True):
         # plot_distribution_of_false_positive_detection_times(false_positive_list, batch_size, is_parametric)
         if is_parametric:
             data_store.to_csv(
-                f"./Results/GLRT_ROSS/Performance_Tests/SimpleDetection_age_of_process_Batch_of_size_{batch_size}_rho{rho * 100}_rcpm.csv",
+                f"./Results/GLRT_ROSS/Performance_Tests/Age_of_process/SimpleDetection_age_of_process_Batch_of_size_{batch_size}_rho{rho * 100}_rcpm.csv",
                 index=False)
         else:
             if batch_size is None:
                 data_store.to_csv(
-                    f"./Results/GLRT_ROSS/Performance_Tests/SimpleDetection_age_of_process_Batch_of_size_nonparametric_rho{rho * 100}_rcpm.csv",
+                    f"./Results/GLRT_ROSS/Performance_Tests/Age_of_process/SimpleDetection_age_of_process_Batch_of_size_nonparametric_rho{rho * 100}_rcpm.csv",
                     index=False)
             else:
                 data_store.to_csv(
-                    f"./Results/GLRT_ROSS/Performance_Tests/SimpleDetection_age_of_process_Batch_of_size_{batch_size}_rho{rho * 100}_rcpm_nonparam.csv",
+                    f"./Results/GLRT_ROSS/Performance_Tests/Age_of_process/SimpleDetection_age_of_process_Batch_of_size_{batch_size}_rho{rho * 100}_rcpm_nonparam.csv",
                     index=False)
 
 
@@ -2283,16 +2283,16 @@ def main_process_queue_length_rcpm(batch_size, is_parametric=True):
                                                                                             power_delay_log, cpm_func)
         if is_parametric:
             data_store.to_csv(
-                f"./Results/GLRT_ROSS/Performance_Tests/SimpleDetection_queue_length_Batch_of_size_{batch_size}_rho{rho * 100}_rcpm.csv",
+                f"./Results/GLRT_ROSS/Performance_Tests/Queue_Length/SimpleDetection_queue_length_Batch_of_size_{batch_size}_rho{rho * 100}_rcpm.csv",
                 index=False)
         else:
             if batch_size is None:
                 data_store.to_csv(
-                    f"./Results/GLRT_ROSS/Performance_Tests/SimpleDetection_queue_length_Batch_of_size_nonparametric_rho{rho * 100}_rcpm.csv",
+                    f"./Results/GLRT_ROSS/Performance_Tests/Queue_Length/SimpleDetection_queue_length_Batch_of_size_nonparametric_rho{rho * 100}_rcpm.csv",
                     index=False)
             else:
                 data_store.to_csv(
-                    f"./Results/GLRT_ROSS/Performance_Tests/SimpleDetection_queue_length_Batch_of_size_{batch_size}_rho{rho * 100}_rcpm_nonparam.csv",
+                    f"./Results/GLRT_ROSS/Performance_Tests/Queue_Length/SimpleDetection_queue_length_Batch_of_size_{batch_size}_rho{rho * 100}_rcpm_nonparam.csv",
                     index=False)
 
 
@@ -2342,8 +2342,8 @@ if __name__ == "__main__":
     #     main_wait_times_simple_rcpm(100, is_parametric=False)
     #     main_wait_times_simple_rcpm(150, is_parametric=False)
     #     main_wait_times_simple_rcpm(200, is_parametric=False)
-    main_wait_times_simple_rcpm(1500, is_parametric=True)
-    main_wait_times_simple_rcpm(2000, is_parametric=True)
+    #    main_wait_times_simple_rcpm(1500, is_parametric=True)
+    #    main_wait_times_simple_rcpm(2000, is_parametric=True)
     #     main_wait_times_simple_rcpm(1000, is_parametric=False)
     #     main_process_age_rcpm(100)
     #     main_process_age_rcpm(200)
@@ -2368,4 +2368,4 @@ if __name__ == "__main__":
 #     main_process_joint_observations(200)
 #     main_process_joint_observations(500)
 #     main_process_joint_observations(1000)
-#     main_process_joint_observations(2000)
+    main_process_joint_observations(1500)
