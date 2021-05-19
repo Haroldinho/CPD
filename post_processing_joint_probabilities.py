@@ -32,10 +32,30 @@ final_cond_prob_df = pd.DataFrame()
 ###########################################
 # Combine probabilities
 ###########################################
+
+# 0. Copy all relevant data
 final_cond_prob_df["Run Length"] = combined_cond_prob_df["Run Length"]
 final_cond_prob_df["rho"] = combined_cond_prob_df["rho"]
 final_cond_prob_df["delta_rho"] = combined_cond_prob_df["delta_rho"]
 final_cond_prob_df["Batch Size"] = combined_cond_prob_df["Batch Size"]
+
+final_cond_prob_df["A+, Q+, W+ | Change"] = combined_cond_prob_df["A+, Q+, W+ | Change"]
+final_cond_prob_df["A-, Q-, W- | Change"] = combined_cond_prob_df["A-, Q-, W- | Change"]
+final_cond_prob_df["A+, Q-, W- | Change"] = combined_cond_prob_df["A+, Q-, W- | Change"]
+final_cond_prob_df["A+, Q+, W- | Change"] = combined_cond_prob_df["A+, Q+, W- | Change"]
+final_cond_prob_df["A-, Q+, W- | Change"] = combined_cond_prob_df["A-, Q+, W- | Change"]
+final_cond_prob_df["A-, Q-, W+ | Change"] = combined_cond_prob_df["A-, Q-, W+ | Change"]
+final_cond_prob_df["A+, Q-, W+ | Change"] = combined_cond_prob_df["A+, Q-, W+ | Change"]
+final_cond_prob_df["A-, Q+, W+ | Change"] = combined_cond_prob_df["A-, Q+, W+ | Change"]
+
+final_cond_prob_df["A+, Q+, W+ | No Change"] = combined_cond_prob_df["A+, Q+, W+ | No Change"]
+final_cond_prob_df["A-, Q-, W- | No Change"] = combined_cond_prob_df["A-, Q-, W- | No Change"]
+final_cond_prob_df["A+, Q-, W- | No Change"] = combined_cond_prob_df["A+, Q-, W- | No Change"]
+final_cond_prob_df["A+, Q+, W- | No Change"] = combined_cond_prob_df["A+, Q+, W- | No Change"]
+final_cond_prob_df["A-, Q+, W- | No Change"] = combined_cond_prob_df["A-, Q+, W- | No Change"]
+final_cond_prob_df["A-, Q-, W+ | No Change"] = combined_cond_prob_df["A-, Q-, W+ | No Change"]
+final_cond_prob_df["A+, Q-, W+ | No Change"] = combined_cond_prob_df["A+, Q-, W+ | No Change"]
+final_cond_prob_df["A-, Q+, W+ | No Change"] = combined_cond_prob_df["A-, Q+, W+ | No Change"]
 # 1. Two way probabilities
 final_cond_prob_df["A+, Q+ | Change"] = combined_cond_prob_df["A+, Q+, W+ | Change"] + \
                                         combined_cond_prob_df["A+, Q+, W- | Change"]
@@ -143,7 +163,7 @@ final_cond_prob_df["W | No Change"] = final_cond_prob_df["W+ | No Change"] + fin
 
 # assert((final_cond_prob_df["A+ | Change"] + final_cond_prob_df["A- | Change"] <= 1.01).all())
 # save file
-final_cond_prob_df.to_csv("../joint_conditional_probability_2.csv")
+final_cond_prob_df.to_csv("../joint_conditional_probability_3.csv")
 
 # return to original path
 chdir(orig_dir)
