@@ -92,7 +92,7 @@ def generate_random_change_point_time(arl_0, end_of_warm_up_time):
     event_time = float("inf")
     u = random.random()
     if u > np.exp(-1):
-        # generate a random numbr from 1 to arl_0 exclusive.
+        # generate a random number from 1 to arl_0 exclusive.
         event_time = random.randint(1, arl_0)
         while end_of_warm_up_time > event_time:
             event_time = random.randint(1, arl_0)
@@ -584,6 +584,26 @@ def simulate_joint_change_points_conditioned_on_hypothesis_outcome(data_df: pd.D
     changepoint_age_neg_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
     changepoint_age_neg_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
 
+    changepoint_age_pos_queue_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_pos_queue_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_queue_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_queue_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+
+    changepoint_age_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_age_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_queue_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_queue_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    changepoint_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+
     no_changepoint_age_pos_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
     no_changepoint_age_pos_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
     no_changepoint_age_pos_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
@@ -592,6 +612,26 @@ def simulate_joint_change_points_conditioned_on_hypothesis_outcome(data_df: pd.D
     no_changepoint_age_neg_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
     no_changepoint_age_neg_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
     no_changepoint_age_neg_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+
+    no_changepoint_age_pos_queue_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_pos_queue_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_queue_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_queue_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_queue_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_queue_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_queue_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_queue_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_pos_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_pos_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+
+    no_changepoint_age_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_age_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_queue_pos = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_queue_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_wait_neg = {delta_rho: 0 for delta_rho in delta_rhos}
+    no_changepoint_wait_pos = {delta_rho: 0 for delta_rho in delta_rhos}
 
     disregard_frac = 0.05
     effective_sample_time = disregard_frac * end_time
@@ -643,24 +683,54 @@ def simulate_joint_change_points_conditioned_on_hypothesis_outcome(data_df: pd.D
             if np.isinf(time_of_change):
                 # no changepoint
                 # any detection is a false positive
+                if is_change_point_triggered_queue:
+                    no_changepoint_queue_pos[delta_rho] += 1
+                    if is_change_point_triggered_wait:
+                        no_changepoint_queue_pos_wait_pos[delta_rho] += 1
+                    else:
+                        no_changepoint_queue_pos_wait_neg[delta_rho] += 1
+                else:
+                    no_changepoint_queue_neg[delta_rho] += 1
+                    if is_change_point_triggered_wait:
+                        no_changepoint_queue_neg_wait_pos[delta_rho] += 1
+                    else:
+                        no_changepoint_queue_neg_wait_neg[delta_rho] += 1
+                if is_change_point_triggered_wait:
+                    no_changepoint_wait_pos[delta_rho] += 1
+                    if is_change_point_triggered_age:
+                        no_changepoint_age_pos_wait_pos[delta_rho] += 1
+                    else:
+                        no_changepoint_age_neg_wait_pos[delta_rho] += 1
+                else:
+                    no_changepoint_wait_neg[delta_rho] += 1
+                    if is_change_point_triggered_age:
+                        no_changepoint_age_pos_wait_neg[delta_rho] += 1
+                    else:
+                        no_changepoint_age_neg_wait_neg[delta_rho] += 1
                 if is_change_point_triggered_age:
+                    no_changepoint_age_pos[delta_rho] += 1
                     if is_change_point_triggered_queue:
+                        no_changepoint_age_pos_queue_pos[delta_rho] += 1
                         if is_change_point_triggered_wait:
                             no_changepoint_age_pos_queue_pos_wait_pos[delta_rho] += 1
                         else:
                             no_changepoint_age_pos_queue_pos_wait_neg[delta_rho] += 1
                     else:  # no quue change point
+                        no_changepoint_age_pos_queue_neg[delta_rho] += 1
                         if is_change_point_triggered_wait:
                             no_changepoint_age_pos_queue_neg_wait_pos[delta_rho] += 1
                         else:
                             no_changepoint_age_pos_queue_neg_wait_neg[delta_rho] += 1
                 else:  # no ae change point
+                    no_changepoint_age_neg[delta_rho] += 1
                     if is_change_point_triggered_queue:
+                        no_changepoint_age_neg_queue_pos[delta_rho] += 1
                         if is_change_point_triggered_wait:
                             no_changepoint_age_neg_queue_pos_wait_pos[delta_rho] += 1
                         else:
                             no_changepoint_age_neg_queue_pos_wait_neg[delta_rho] += 1
                     else:  # no queue change point
+                        no_changepoint_age_neg_queue_neg[delta_rho] += 1
                         if is_change_point_triggered_wait:
                             no_changepoint_age_neg_queue_neg_wait_pos[delta_rho] += 1
                         else:
@@ -687,30 +757,168 @@ def simulate_joint_change_points_conditioned_on_hypothesis_outcome(data_df: pd.D
                 if not np.isnan(dd_wait):
                     if dd_wait > 0:
                         is_wait_correct = True
+                if is_queue_correct:
+                    changepoint_queue_pos[delta_rho] += 1
+                    if is_wait_correct:
+                        changepoint_queue_pos_wait_pos[delta_rho] += 1
+                    else:
+                        changepoint_queue_pos_wait_neg[delta_rho] += 1
+                else:
+                    changepoint_queue_neg[delta_rho] += 1
+                    if is_wait_correct:
+                        changepoint_queue_neg_wait_pos[delta_rho] += 1
+                    else:
+                        changepoint_queue_neg_wait_neg[delta_rho] += 1
+                if is_wait_correct:
+                    changepoint_wait_pos[delta_rho] += 1
+                    if is_age_correct:
+                        changepoint_age_pos_wait_pos[delta_rho] += 1
+                    else:
+                        changepoint_age_neg_wait_pos[delta_rho] += 1
+                else:
+                    changepoint_wait_neg[delta_rho] += 1
+                    if is_age_correct:
+                        changepoint_age_pos_wait_neg[delta_rho] += 1
+                    else:
+                        changepoint_age_neg_wait_neg[delta_rho] += 1
                 if is_age_correct:
+                    changepoint_age_pos[delta_rho] += 1
                     if is_queue_correct:
+                        changepoint_age_pos_queue_pos[delta_rho] += 1
                         if is_wait_correct:
                             changepoint_age_pos_queue_pos_wait_pos[delta_rho] += 1
                         else:
                             changepoint_age_pos_queue_pos_wait_neg[delta_rho] += 1
                     else:
+                        changepoint_age_pos_queue_neg[delta_rho] += 1
                         if is_wait_correct:
                             changepoint_age_pos_queue_neg_wait_pos[delta_rho] += 1
                         else:
                             changepoint_age_pos_queue_neg_wait_neg[delta_rho] += 1
                 else:
+                    changepoint_age_neg[delta_rho] += 1
                     if is_queue_correct:
+                        changepoint_age_neg_queue_pos[delta_rho] += 1
                         if is_wait_correct:
                             changepoint_age_neg_queue_pos_wait_pos[delta_rho] += 1
                         else:
                             changepoint_age_neg_queue_pos_wait_neg[delta_rho] += 1
                     else:
+                        changepoint_age_neg_queue_neg[delta_rho] += 1
                         if is_wait_correct:
                             changepoint_age_neg_queue_neg_wait_pos[delta_rho] += 1
                         else:
                             changepoint_age_neg_queue_neg_wait_neg[delta_rho] += 1
     for delta_rho in delta_rhos:
         # Compute the proportions of correct detection given the different combinations of detections.
+        prop_correct_age_pos = changepoint_age_pos[delta_rho] / max(
+            1e-4,
+            changepoint_age_pos[delta_rho]
+            +
+            no_changepoint_age_pos[delta_rho]
+        )
+        prop_correct_age_neg = changepoint_age_neg[delta_rho] / max(
+            1e-4,
+            changepoint_age_neg[delta_rho]
+            +
+            no_changepoint_age_neg[delta_rho]
+        )
+        prop_correct_queue_pos = changepoint_queue_pos[delta_rho] / max(
+            1e-4,
+            changepoint_queue_pos[delta_rho]
+            +
+            no_changepoint_queue_pos[delta_rho]
+        )
+        prop_correct_queue_neg = changepoint_queue_neg[delta_rho] / max(
+            1e-4,
+            changepoint_queue_neg[delta_rho]
+            +
+            no_changepoint_queue_neg[delta_rho]
+        )
+        prop_correct_wait_pos = changepoint_wait_pos[delta_rho] / max(
+            1e-4,
+            changepoint_wait_pos[delta_rho]
+            +
+            no_changepoint_wait_pos[delta_rho]
+        )
+        prop_correct_wait_neg = changepoint_wait_neg[delta_rho] / max(
+            1e-4,
+            changepoint_wait_neg[delta_rho]
+            +
+            no_changepoint_wait_neg[delta_rho]
+        )
+        prop_correct_age_pos_queue_pos = changepoint_age_pos_queue_pos[delta_rho] / max(
+            1e-4,
+            changepoint_age_pos_queue_pos[delta_rho]
+            +
+            no_changepoint_age_pos_queue_pos[delta_rho]
+        )
+        prop_correct_age_pos_queue_neg = changepoint_age_pos_queue_neg[delta_rho] / max(
+            1e-4,
+            changepoint_age_pos_queue_neg[delta_rho]
+            +
+            no_changepoint_age_pos_queue_neg[delta_rho]
+        )
+        prop_correct_age_pos_wait_pos = changepoint_age_pos_wait_pos[delta_rho] / max(
+            1e-4,
+            changepoint_age_pos_wait_pos[delta_rho]
+            +
+            no_changepoint_age_pos_wait_pos[delta_rho]
+        )
+        prop_correct_age_pos_wait_neg = changepoint_age_pos_wait_neg[delta_rho] / max(
+            1e-4,
+            changepoint_age_pos_wait_neg[delta_rho]
+            +
+            no_changepoint_age_pos_wait_neg[delta_rho]
+        )
+        prop_correct_queue_pos_wait_pos = changepoint_queue_pos_wait_pos[delta_rho] / max(
+            1e-4,
+            changepoint_queue_pos_wait_pos[delta_rho]
+            +
+            no_changepoint_queue_pos_wait_pos[delta_rho]
+        )
+        prop_correct_queue_pos_wait_neg = changepoint_queue_pos_wait_neg[delta_rho] / max(
+            1e-4,
+            changepoint_queue_pos_wait_neg[delta_rho]
+            +
+            no_changepoint_queue_pos_wait_neg[delta_rho]
+        )
+        prop_correct_age_neg_queue_pos = changepoint_age_neg_queue_pos[delta_rho] / max(
+            1e-4,
+            changepoint_age_neg_queue_pos[delta_rho]
+            +
+            no_changepoint_age_neg_queue_pos[delta_rho]
+        )
+        prop_correct_age_neg_queue_neg = changepoint_age_neg_queue_neg[delta_rho] / max(
+            1e-4,
+            changepoint_age_neg_queue_neg[delta_rho]
+            +
+            no_changepoint_age_neg_queue_neg[delta_rho]
+        )
+        prop_correct_age_neg_wait_pos = changepoint_age_neg_wait_pos[delta_rho] / max(
+            1e-4,
+            changepoint_age_neg_wait_pos[delta_rho]
+            +
+            no_changepoint_age_neg_wait_pos[delta_rho]
+        )
+        prop_correct_age_neg_wait_neg = changepoint_age_neg_wait_neg[delta_rho] / max(
+            1e-4,
+            changepoint_age_neg_wait_neg[delta_rho]
+            +
+            no_changepoint_age_neg_wait_neg[delta_rho]
+        )
+        prop_correct_queue_neg_wait_pos = changepoint_queue_neg_wait_pos[delta_rho] / max(
+            1e-4,
+            changepoint_queue_neg_wait_pos[delta_rho]
+            +
+            no_changepoint_queue_neg_wait_pos[delta_rho]
+        )
+        prop_correct_queue_neg_wait_neg = changepoint_queue_neg_wait_neg[delta_rho] / max(
+            1e-4,
+            changepoint_queue_neg_wait_neg[delta_rho]
+            +
+            no_changepoint_queue_neg_wait_neg[delta_rho]
+        )
         prop_correct_age_pos_queue_pos_wait_pos = changepoint_age_pos_queue_pos_wait_pos[delta_rho] / max((
                 changepoint_age_pos_queue_pos_wait_pos[delta_rho]
                 +
@@ -810,6 +1018,27 @@ def simulate_joint_change_points_conditioned_on_hypothesis_outcome(data_df: pd.D
             'Change | A-, Q-, W+': prop_correct_age_neg_queue_neg_wait_pos,
             'Change | A+, Q-, W-': prop_correct_age_pos_queue_neg_wait_neg,
             'Change | A-, Q-, W-': prop_correct_age_neg_queue_neg_wait_neg,
+
+            'Change | A+, Q+': prop_correct_age_pos_queue_pos,
+            'Change | A+, Q-': prop_correct_age_pos_queue_neg,
+            'Change | A+, W+': prop_correct_age_pos_wait_pos,
+            'Change | A+, W-': prop_correct_age_pos_wait_neg,
+            'Change | A-, Q+': prop_correct_age_neg_queue_pos,
+            'Change | A-, Q-': prop_correct_age_neg_queue_neg,
+            'Change | A-, W+': prop_correct_age_neg_wait_pos,
+            'Change | A-, W-': prop_correct_age_neg_wait_neg,
+            'Change | Q+, W-': prop_correct_queue_pos_wait_neg,
+            'Change | Q+, W+': prop_correct_queue_pos_wait_pos,
+            'Change | Q-, W-': prop_correct_queue_neg_wait_neg,
+            'Change | Q-, W+': prop_correct_queue_neg_wait_pos,
+
+            'Change | A+': prop_correct_age_pos,
+            'Change | A-': prop_correct_age_neg,
+            'Change | Q+': prop_correct_queue_pos,
+            'Change | Q-': prop_correct_queue_neg,
+            'Change | Q+': prop_correct_wait_pos,
+            'Change | Q-': prop_correct_wait_neg,
+
             'No Change | A+, Q+, W+': prop_incorrect_age_pos_queue_pos_wait_pos,
             'No Change | A+, Q+, W-': prop_incorrect_age_pos_queue_pos_wait_neg,
             'No Change | A+, Q-, W+': prop_incorrect_age_pos_queue_neg_wait_pos,
@@ -2296,6 +2525,38 @@ def main_process_queue_length_rcpm(batch_size, is_parametric=True):
                     index=False)
 
 
+def main_process_joint_observations_change_cond_on_hypothesis(batch_size):
+    rhos = [0.25, 0.5, 0.75]
+    delta_rho = [-0.5, -0.25, 0, 0.25, 0.5, 0.75, 1.0, 1.2]
+    start_time = 0
+    end_time = 1e5
+    num_runs = 1000
+    log_directory = "./Results/GLRT_ROSS/Performance_Tests/Logs/"
+    log_file_name = log_directory + "joint_tests_log_"
+    data_store = pd.DataFrame()
+    mu = 1.0
+    power_delay_log = PowerTestLogger(log_file_name, is_full_path=False, file_type="bz2", dataframe=data_store)
+    # Personal Machine
+    print(R_VERSION_BUILD)
+    cpm = importr("cpm", lib_loc="C:/Users/swaho/OneDrive/Documents/R/win-library/3.6")
+    with open('detectChangePointwithCPM.R', 'r') as f:
+        r_string = f.read()
+    cpm_func = STAP(r_string, "Detect_r_cpm_GaussianChangePoint")
+    for rho in rhos:
+        arr_rate_0 = mu * rho
+        my_service_rates = [mu, mu]
+        data_store = simulate_joint_change_points_conditioned_on_hypothesis_outcome(data_store, rho, delta_rho,
+                                                                                    arr_rate_0, num_runs,
+                                                                                    start_time, end_time,
+                                                                                    my_service_rates, batch_size,
+                                                                                    power_delay_log,
+                                                                                    cpm_func)
+        data_store.to_csv(
+            "./Results/GLRT_ROSS/Performance_Tests/ChangePoint_Conditioned_on_HypothesisOutcome/" +
+            "JointDetection_Batch_of_size_{}_rho{}_rcpm.csv".format(batch_size, rho * 100),
+            index=False)
+
+
 def main_process_joint_observations(batch_size):
     rhos = [0.25, 0.5, 0.75]
     delta_rho = [-0.5, -0.25, 0, 0.25, 0.5, 0.75, 1.0, 1.2]
@@ -2348,14 +2609,14 @@ if __name__ == "__main__":
     #     main_process_age_rcpm(100)
     #     main_process_age_rcpm(200)
     #     main_process_age_rcpm(500)
-    main_process_age_rcpm(1500, is_parametric=True)
-    main_process_age_rcpm(2000, is_parametric=True)
+    #     main_process_age_rcpm(1500, is_parametric=True)
+    #     main_process_age_rcpm(2000, is_parametric=True)
     #     main_process_queue_length_rcpm(100)
     #     main_process_queue_length_rcpm(200)
     #     main_process_queue_length_rcpm(500)
     #     main_process_queue_length_rcpm(1000, is_parametric=True)
-    main_process_queue_length_rcpm(1500, is_parametric=True)
-    main_process_queue_length_rcpm(2000, is_parametric=True)
+    #     main_process_queue_length_rcpm(1500, is_parametric=True)
+    #     main_process_queue_length_rcpm(2000, is_parametric=True)
     #     main_process_age_rcpm(100)
     #     main_process_age_rcpm(200)
     #     main_process_age_rcpm(500)
@@ -2364,8 +2625,13 @@ if __name__ == "__main__":
     #     main_process_queue_length_rcpm(200)
     #     main_process_queue_length_rcpm(500)
     #     main_process_queue_length_rcpm(1000, is_parametric=True)
-#     main_process_joint_observations(100)
-#     main_process_joint_observations(200)
-#     main_process_joint_observations(500)
-#     main_process_joint_observations(1000)
-    main_process_joint_observations(1500)
+    #     main_process_joint_observations(100)
+    #     main_process_joint_observations(200)
+    #     main_process_joint_observations(500)
+    #     main_process_joint_observations(1000)
+    #     main_process_joint_observations(1500)
+    main_process_joint_observations_change_cond_on_hypothesis(100)
+    main_process_joint_observations_change_cond_on_hypothesis(200)
+    main_process_joint_observations_change_cond_on_hypothesis(500)
+    main_process_joint_observations_change_cond_on_hypothesis(1000)
+    main_process_joint_observations_change_cond_on_hypothesis(1500)

@@ -21,7 +21,7 @@ import pandas as pd
 # Steps
 # Step 1: Load conditional probability of all combinations of outcome given a changepoint or no changepoint
 
-main_file_name = "./Results/GLRT_ROSS/Performance_Tests/joint_conditional_probability_2.csv"
+main_file_name = "./Results/GLRT_ROSS/Performance_Tests/joint_conditional_probability_3.csv"
 joint_cond_prob_df = pd.read_csv(main_file_name)
 
 # Step 2: Reduce the dataframe only to single conditional outcomes
