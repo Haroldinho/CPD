@@ -14,6 +14,21 @@ import numpy as np
 import pandas as pd
 
 
+def combine_changes_conditioned_on_hypothesis(folder_name):
+    all_files = [f for f in listdir(folder_name) if isfile(join(folder_name, f))]
+    orig_dir = getcwd()
+    chdir(folder_name)
+    # concatenate all conditional data
+    cond_prob_df_list = []
+    for file_name in all_files:
+        local_df = pd.read_csv(file_name)
+        cond_prob_df_list.append(local_df)
+    combined_cond_prob_df = pd.concat(cond_prob_df_list, axis=0)
+    combined_cond_prob_df.info()
+    combined_cond_prob_df.to_csv("../joint_conditional_probability_change_conditioned_on_hypothesis.csv")
+    chdir(orig_dir)
+
+
 def combine_hypothesis_conditioned_on_change(folder_name):
     all_files = [f for f in listdir(folder_name) if isfile(join(folder_name, f))]
     print(all_files)
@@ -331,5 +346,7 @@ def invert_conditional_probability_direction():
 if __name__ == "__main__":
     #     folder_name_ab = "./Results/GLRT_ROSS/Performance_Tests/Hypothesis_Conditioned_on_Change/"
     #     combine_hypothesis_conditioned_on_change(folder_name_ab)
+    folder_name_ba = "./Results/GLRT_ROSS/Performance_Tests/ChangePoint_Conditioned_on_HypothesisOutcome/"
+    combine_changes_conditioned_on_hypothesis(folder_name_ba)
     # Compute the inverted conditional probability
-    invert_conditional_probability_direction()
+#     invert_conditional_probability_direction()

@@ -1036,8 +1036,8 @@ def simulate_joint_change_points_conditioned_on_hypothesis_outcome(data_df: pd.D
             'Change | A-': prop_correct_age_neg,
             'Change | Q+': prop_correct_queue_pos,
             'Change | Q-': prop_correct_queue_neg,
-            'Change | Q+': prop_correct_wait_pos,
-            'Change | Q-': prop_correct_wait_neg,
+            'Change | W+': prop_correct_wait_pos,
+            'Change | W-': prop_correct_wait_neg,
 
             'No Change | A+, Q+, W+': prop_incorrect_age_pos_queue_pos_wait_pos,
             'No Change | A+, Q+, W-': prop_incorrect_age_pos_queue_pos_wait_neg,
@@ -2630,9 +2630,9 @@ if __name__ == "__main__":
     #     main_process_joint_observations(500)
     #     main_process_joint_observations(1000)
     #     main_process_joint_observations(1500)
-    #     main_process_joint_observations_change_cond_on_hypothesis(100)
-    #     main_process_joint_observations_change_cond_on_hypothesis(200)
-    #     main_process_joint_observations_change_cond_on_hypothesis(500)
-    #     main_process_joint_observations_change_cond_on_hypothesis(1000)
-    #     main_process_joint_observations_change_cond_on_hypothesis(1500)
+    main_process_joint_observations_change_cond_on_hypothesis(100)
+    main_process_joint_observations_change_cond_on_hypothesis(200)
+    main_process_joint_observations_change_cond_on_hypothesis(500)
+    main_process_joint_observations_change_cond_on_hypothesis(1000)
+    main_process_joint_observations_change_cond_on_hypothesis(1500)
     main_process_joint_observations_change_cond_on_hypothesis(2000)
