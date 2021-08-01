@@ -124,7 +124,7 @@ def simulate_single_server_queue_and_compute_ljung_box_score(start_time, end_tim
 
 def simulate_single_server_queue_and_compute_ad_wilk_score(start_time, end_time, my_arrival_rate, my_service_rate,
                                                            batch_sizes, num_runs,
-                                                           observation_type="wait_times",
+                                                           local_observation_type="wait_times",
                                                            ):
     my_arrival_rates = [my_arrival_rate, my_arrival_rate]
     my_service_rates = [my_service_rate, my_service_rate]
@@ -132,41 +132,41 @@ def simulate_single_server_queue_and_compute_ad_wilk_score(start_time, end_time,
     anderson_darling_successes = {batch: 0 for batch in batch_sizes}
     shapiro_wilk_successes = {batch: 0 for batch in batch_sizes}
     for run in range(num_runs):
-        print(f"Run {run}/{num_runs}")
+        print(f"Run {run}/{num_runs} based off {local_observation_type}")
         # 1. Simulate waiting times or age of a process
         # discard 10% of the samples
-        if observation_type == "wait_times":
+        if local_observation_type == "wait_times":
             orig_time_samples, orig_time_stamps = simulate_deds_return_wait_times(start_time, end_time,
                                                                                   my_arrival_rates, time_of_changes,
                                                                                   my_service_rates, 0.1)
-        elif observation_type == "age":
+        elif local_observation_type == "age":
             orig_time_samples, orig_time_stamps = simulate_deds_return_age(start_time, end_time,
                                                                            my_arrival_rates, time_of_changes,
                                                                            my_service_rates, 0.1)
-        elif observation_type == "queue":
+        elif local_observation_type == "queue":
             orig_time_samples, orig_time_stamps = simulate_deds_return_queue_length(start_time, end_time,
                                                                                     my_arrival_rates, time_of_changes,
                                                                                     my_service_rates, 0.1)
 
-        print("Simulating {} wait times from t={} to t={}.".format(len(orig_time_stamps), min(orig_time_stamps),
-                                                                   max(orig_time_stamps)))
+        print("Simulating {} {} from t={} to t={}.".format(len(orig_time_stamps), local_observation_type,
+                                                           min(orig_time_stamps), max(orig_time_stamps)))
         assert (max(orig_time_stamps) == orig_time_stamps[-1])
         for batch_size in batch_sizes:
             # 2. Batch them into groups returning the mean of the batches and their centers.
             batch_mean_orig_time_samples, batch_centers = create_nonoverlapping_batch_means(orig_time_samples,
                                                                                             orig_time_stamps,
                                                                                             batch_size=batch_size)
-            print("Recorded {} batches from t={} to t={}".format(len(batch_mean_orig_time_samples),
-                                                                 batch_centers[0], batch_centers[-1]))
+            #             print("Recorded {} batches from t={} to t={}".format(len(batch_mean_orig_time_samples),
+            #                                                                  batch_centers[0], batch_centers[-1]))
 
             # 3. Test the batch means for normality
             # 3.1     Q-Q plot  Kolmogorov Smirnov
             if run == 1:
                 scipy.stats.probplot(batch_mean_orig_time_samples, plot=plt)
-                plt.title("Batch {} Q-Q plot [batch size={}] ".format(observation_type, batch_size))
+                plt.title("Batch {} Q-Q plot [batch size={}] ".format(local_observation_type, batch_size))
                 plt.savefig("./Figures/NormalityTest/QQPlots/QQ_n_{}_{}_{}.png".format(batch_size,
                                                                                        my_arrival_rate,
-                                                                                       observation_type),
+                                                                                       local_observation_type),
                             dpi=500)
                 plt.close()
             # 3.2      Anderson-Darling Test
@@ -185,11 +185,11 @@ def simulate_single_server_queue_and_compute_ad_wilk_score(start_time, end_time,
 def perform_anderson_darling_test(batch_data):
     ad_stat, ad_crit, ad_sign_level = scipy.stats.anderson(batch_data)
     if ad_stat <= ad_crit[2]:
-        print("\n\t For alpha=0.05, stat({}) is lower than critical value({}) so we reject the test (AD)".format(
-            ad_stat, ad_crit[2]))
+        #         print("\n\t For alpha=0.05, stat({}) is lower than critical value({}) so we reject the test (AD)".format(
+        #             ad_stat, ad_crit[2]))
         test_passed = False
     else:
-        print("\n\t We failed to reject normality assumption using an Anderson Darling Test")
+        #         print("\n\t We failed to reject normality assumption using an Anderson Darling Test")
         test_passed = True
     print("\t At level: {}".format(ad_sign_level[2]))
     return ad_stat, test_passed
@@ -199,11 +199,11 @@ def perform_shapiro_wilk_test(batch_data):
     shapiro_stat, shapiro_p_value = scipy.stats.shapiro(batch_data)
     p_value = 0.05
     if shapiro_p_value <= p_value:
-        print("\n\t For alpha=0.05, stat({}) is lower than critical value({}) so we reject the test (SW)".format(
-            shapiro_stat, shapiro_p_value))
+        #         print("\n\t For alpha=0.05, stat({}) is lower than critical value({}) so we reject the test (SW)".format(
+        #             shapiro_stat, shapiro_p_value))
         test_passed = False
     else:
-        print("\n\t We failed to reject normality assumption using a Shapiro-Wilk Test")
+        #         print("\n\t We failed to reject normality assumption using a Shapiro-Wilk Test")
         test_passed = True
     return shapiro_p_value, test_passed
 
@@ -229,18 +229,18 @@ def simulate_ladder_point_process_and_compute_correlation(start_time, end_time, 
     return correlation
 
 
-def test_for_normality(start_time, end_time, my_arrival_rates, time_of_changes, my_service_rates, batch_size):
-    # >>>>>>>>>>>>>>>>>>>>>>>>>>>  Multiple Repetitions  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    # >>>>>>>>>>>>>>>>>>> Anderson-Darling Test <<<<<<<<<<<<<<<<<<<<
-    ad_crit = [0.572, 0.651, 0.782, 0.912, 1.084]
-    ad_stat = simulate_single_server_queue_and_compute_ad_wilk_score(start_time, end_time, my_arrival_rates,
-                                                                     time_of_changes, my_service_rates, batch_size, 20)
-    print("After 5 simulations, for a batch size of {} points, mean AD_score={}".format(batch_size, ad_stat))
-    if ad_stat > ad_crit[2]:
-        print("\n\t For alpha=0.05, stat({}) is greater than critical value({}) so we reject the test".format(
-            ad_stat, ad_crit[2]))
-    else:
-        print("\n\t We failed to reject normality assumption using an Anderson Darling Test")
+# def test_for_normality(start_time, end_time, my_arrival_rates, time_of_changes, my_service_rates, batch_size):
+#     # >>>>>>>>>>>>>>>>>>>>>>>>>>>  Multiple Repetitions  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#     # >>>>>>>>>>>>>>>>>>> Anderson-Darling Test <<<<<<<<<<<<<<<<<<<<
+#     ad_crit = [0.572, 0.651, 0.782, 0.912, 1.084]
+#     ad_stat = simulate_single_server_queue_and_compute_ad_wilk_score(start_time, end_time, my_arrival_rates,
+#                                                                      time_of_changes, my_service_rates, batch_size, 20)
+#     print("After 5 simulations, for a batch size of {} points, mean AD_score={}".format(batch_size, ad_stat))
+#     if ad_stat > ad_crit[2]:
+#         print("\n\t For alpha=0.05, stat({}) is greater than critical value({}) so we reject the test".format(
+#             ad_stat, ad_crit[2]))
+#     else:
+#         print("\n\t We failed to reject normality assumption using an Anderson Darling Test")
 
 
 def plot_autocorrelation(batch_mean_wait_times, batch_size, observation_type="wait_times", simulation_type="DEDS"):
@@ -318,7 +318,7 @@ def test_wait_times_batch_means():
     print("Obtained convolved correlation: {}".format(correlation))
 
 
-def test_normality(batch_sizes, observation_type="wait_times"):
+def test_normality(batch_sizes, norm_observation_type="wait_times"):
     """
     Verify the normality assumption for different arrival rates and service rates
     3 steps
@@ -331,11 +331,11 @@ def test_normality(batch_sizes, observation_type="wait_times"):
     arrival_rates = [0.25, 0.5, 0.75, 0.9]
     my_service_rate = 1.0
     normality_success_rates_list = []
-    num_runs = 100
+    num_runs = 500
     for my_arrival_rate in arrival_rates:
         print("ARRIVAL RATE of {}".format(my_arrival_rate))
         anderson_darling_dic, shapiro_wilk_dic = simulate_single_server_queue_and_compute_ad_wilk_score(
-            start_time, end_time, my_arrival_rate, my_service_rate, batch_sizes, num_runs, observation_type)
+            start_time, end_time, my_arrival_rate, my_service_rate, batch_sizes, num_runs, norm_observation_type)
         crt_arrival_rates = [my_arrival_rate] * len(anderson_darling_dic)
         anderson_darling_results = [val for key, val in anderson_darling_dic.items()]
         shapiro_wilk_results = [val for key, val in shapiro_wilk_dic.items()]
@@ -351,7 +351,7 @@ def test_normality(batch_sizes, observation_type="wait_times"):
     # combine the p values for all the tests
     normality_df = pd.concat(normality_success_rates_list, axis=0)
     # save it to a file
-    normality_df.to_csv(f"Results/NormalityResults/normality_hypothesis_test_{observation_type}.csv")
+    normality_df.to_csv(f"Results/NormalityResults/normality_hypothesis_test_{norm_observation_type}.csv")
 
 
 def test_independence(batch_sizes, full_corr_df=[]):
@@ -397,7 +397,8 @@ def test_independence(batch_sizes, full_corr_df=[]):
 
 if __name__ == "__main__":
     # Batch sizes to consider
-    my_test_batch_sizes = [100, 150, 200, 500, 1000, 2000]
-    for observation_type in ["wait_times", "age", "queue"]:
+    #     my_test_batch_sizes = [100, 150, 200, 500, 1000, 2000]
+    my_test_batch_sizes = [500, 1000, 2000, 4000, 5000, 6000]
+    for observation_type in ["age", "queue"]:
         test_normality(my_test_batch_sizes, observation_type)
     # test_independence(my_test_batch_sizes)
