@@ -178,7 +178,7 @@ def combine_hypothesis_conditioned_on_change(folder_name):
 
     # assert((final_cond_prob_df["A+ | Change"] + final_cond_prob_df["A- | Change"] <= 1.01).all())
     # save file
-    final_cond_prob_df.to_csv("../joint_conditional_probability_3.csv")
+    final_cond_prob_df.to_csv("../joint_conditional_probability_hypothesis_conditioned_on_change.csv")
 
     # return to original path
     chdir(orig_dir)
@@ -344,9 +344,9 @@ def invert_conditional_probability_direction():
 
 
 if __name__ == "__main__":
-    #     folder_name_ab = "./Results/GLRT_ROSS/Performance_Tests/Hypothesis_Conditioned_on_Change/"
-    #     combine_hypothesis_conditioned_on_change(folder_name_ab)
-    folder_name_ba = "./Results/GLRT_ROSS/Performance_Tests/ChangePoint_Conditioned_on_HypothesisOutcome/"
-    combine_changes_conditioned_on_hypothesis(folder_name_ba)
-    # Compute the inverted conditional probability
+    folder_name_ab = "./Results/GLRT_ROSS/Performance_Tests/Hypothesis_Conditioned_on_Change/"
+    combine_hypothesis_conditioned_on_change(folder_name_ab)
+#     folder_name_ba = "./Results/GLRT_ROSS/Performance_Tests/ChangePoint_Conditioned_on_HypothesisOutcome/"
+#     combine_changes_conditioned_on_hypothesis(folder_name_ba)
+# Compute the inverted conditional probability
 #     invert_conditional_probability_direction()
