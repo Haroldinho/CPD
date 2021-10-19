@@ -12,20 +12,17 @@ Author: Harold Nemo Adodo Nikoue
 part of my chapter on parallel partial observability in my thesis
 Date: 10/17/2021
 """
-#%% IMPORTS
-from datetime import time
+import numpy as np
+# %% IMPORTS
 import pandas as pd
-from typing import List
-from sklearn.model_selection import train_test_split, cross_val_score, KFold
 import xgboost as xgb
 from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
-from sklearn.metrics import accuracy_score
-import numpy as np
-from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_squared_log_error
+from sklearn.metrics import mean_squared_error, mean_squared_log_error
+from sklearn.model_selection import train_test_split
 
 folder_name = "Results/GLRT_ROSS/Performance_Tests/"
-change_prob_file_name = folder_name +\
-     "joint_conditional_probability_change_conditioned_on_hypothesis_for_learning.csv"
+change_prob_file_name = folder_name + \
+                        "joint_conditional_probability_change_conditioned_on_hypothesis_for_learning.csv"
 # %%
 change_prob_df = pd.read_csv(change_prob_file_name)
 
@@ -91,96 +88,10 @@ cv_results = xgb.cv(
     early_stopping_rounds=10
 )
 cv_results
+# %% Use Hyperopt
 ######################################
 # Optimizign hyper parameters
 ######################################
-# #%% max_depth and min_child_weight
-# gridsearch_params = [
-#     (max_depth, min_child_weight)
-#     for max_depth in range(9,15)
-#     for min_child_weight in range(3,8)
-# ]
-# min_rmsle = float("inf")
-# best_params = None
-# 
-# for max_depth, min_child_weight in gridsearch_params:
-#     print("CV with max_depth={}, min_child_weight={}".format(
-#         max_depth,
-#         min_child_weight
-#     ))
-# 
-#     #update our parameters
-#     params["max_depth"] = max_depth
-#     params['min_child_weight'] = min_child_weight
-# 
-#     #RUN CV
-#     cv_results = xgb.cv(
-#         params,
-#         dtrain, 
-#         num_boost_round=num_boost_round,
-#         seed=88,
-#         nfold=5,
-#         metrics={'rmsle'},
-#         early_stopping_rounds=10
-#     )
-# 
-#     #Update best RMSLE
-#     mean_rmsle = cv_results["test-rmsle-mean"].min()
-#     boost_rounds = cv_results["test-rmsle-mean"].argmin()
-#     print("\tRMSLE {} for {} rounds".format(mean_rmsle, boost_rounds))
-#     if mean_rmsle < min_rmsle:
-#         min_rmsle = mean_rmsle
-#         best_params = (max_depth, min_child_weight)
-# 
-# print("Best params: {}, {}, RMSLE: {}".format(best_params[0], 
-# best_params[1], min_rmsle))
-# params['max_depth'] = best_params[0]
-# params['min_child_weight'] = best_params[1]
-# # %% Optimize subsample and colsample_bytree
-# gridsearch_params = [
-#     (subsample, colsample_bytree) 
-#     for subsample in [i/10. for i in range(7, 11)]
-#     for colsample_bytree in [i/10. for i in range(7,11)]
-# ]
-# min_rmsle = float("inf")
-# best_params = None
-# 
-# for subsample, colsample_bytree in gridsearch_params:
-#     print("CV with subsample={}, colsample_bytree={}".format(
-#         subsample,
-#         colsample_bytree
-#     ))
-# 
-#     #update our parameters
-#     params["subsample"] = subsample
-#     params['colsample_bytree'] = colsample_bytree
-# 
-#     #RUN CV
-#     cv_results = xgb.cv(
-#         params,
-#         dtrain, 
-#         num_boost_round=num_boost_round,
-#         seed=88,
-#         nfold=5,
-#         metrics={'rmsle'},
-#         early_stopping_rounds=10
-#     )
-# 
-#     #Update best RMSLE
-#     mean_rmsle = cv_results["test-rmsle-mean"].min()
-#     boost_rounds = cv_results["test-rmsle-mean"].argmin()
-#     print("\tRMSLE {} for {} rounds".format(mean_rmsle, boost_rounds))
-#     if mean_rmsle < min_rmsle:
-#         min_rmsle = mean_rmsle
-#         best_params = (subsample, colsample_bytree)
-# 
-# print("Best params: {}, {}, RMSLE: {}".format(best_params[0], 
-# best_params[1], min_rmsle))
-# #update parameter dictionary
-# params['subsample'] = best_params[0]
-# params['colsample_bytree'] = best_params[1]
-# no improvement
-# %% Use Hyperopt
 
 X_train2, X_validation, y_train2, y_validation = train_test_split(X_train, y_train, 
 test_size=.1, random_state=88)
@@ -288,3 +199,6 @@ print(best_hyperparams)
 # %% SAVE THE MODEL
 xgbr_best.save_model("condtional_change_xgboost_model.model")
 # %%
+# Simple sanity check to make sure everything makes sense
+# Pick a few rows,
+# Create the X matrix and predict on it
