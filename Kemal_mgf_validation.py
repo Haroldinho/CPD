@@ -6,12 +6,14 @@
 """
 from typing import List
 
+import pickle as pkl
 import numpy as np
 from dataclasses import dataclass, field
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 from Kemal_autocorrelation_validation import compute_mm1_mean, compute_batch_waiting_times_variance
+from batch_means_methods import create_nonoverlapping_batch_means
 from generate_m_m_1_processes import simulate_deds_return_wait_times
 
 
@@ -21,7 +23,7 @@ class SettingExperiment:
     constant_rho_list: List[float] = field(default_factory=list)
 
     def __init__(self):
-        self.constant_batch_size_list = [20, 40, 80, 200, 500, 1000, 2000, 5000]
+        self.constant_batch_size_list = [20, 80, 200, 500, 2000]
         self.constant_rho_list = [0.1, 0.25, 0.5, 0.75, 0.8, 0.9]
 
 
@@ -31,7 +33,7 @@ class InitialParameter:
     const_service_rate: float
     const_rate_diff: float
     sim_length: int
-    const_num_iter: int = 1000
+    const_num_iter: int = 8000
     batch_size: int = 200
     const_rho: float = 0.1
     const_arr_rate: float = 0.25
@@ -59,17 +61,31 @@ def run_comparison_plots(a_general_setting: SettingExperiment, a_sim_param: Init
         )
 
 
+def plot_quadratic_fit(ax, x_points, y_points, line_style, label):
+    z = np.polyfit(x_points, y_points, 2)
+    p = np.poly1d(z)
+    y_quad = p(np.linspace(min(x_points), max(x_points)))
+    ax.plot(x_points, y_points, '.', x_points, y_quad, line_style, label=label)
+
+
 def plot_empirical_waiting_time_mgf_vs_gaussian_different_batch_sizes(a_sim_param: InitialParameter, batch_sizes: List,
                                                                       rho: float):
     fig, ax = plt.subplots()
     t_abscissae = a_sim_param.list_of_t
     gaussian_mgf = [t * t / 2 for t in t_abscissae]
     ax.plot(t_abscissae, gaussian_mgf, label="Gaussian")
+    file_path_prefix = "./Data/MGF/"
+    log_mgf_results_by_batch_size = []
+    lines_styles = ["-", "--", "-.", ":", 'o']
     for idx in tqdm(range(len(batch_sizes)), desc="Iterating over batch size: "):
         m = batch_sizes[idx]
         a_sim_param.batch_size = m
         list_of_log_mgf_at_t = get_estimates_of_log_normalized_mgf(a_sim_param)
-        ax.plot(t_abscissae, list_of_log_mgf_at_t, lw=3, zorder=7, label=f"KDE for m={m}")
+        log_mgf_results_by_batch_size[m] = list_of_log_mgf_at_t
+        plot_quadratic_fit(ax, t_abscissae, list_of_log_mgf_at_t, lines_styles[idx], f"KDE for m={m}")
+    #        ax.plot(t_abscissae, list_of_log_mgf_at_t, lw=3, zorder=7, label=f"KDE for m={m}")
+    data_to_save_dict = {"list_of_t": t_abscissae, "log_mgfs": log_mgf_results_by_batch_size}
+    pkl.dump(data_to_save_dict, file_path_prefix + f"_rho_{int(rho * 100)}.pkl")
     ax.set_xlabel('t')
     ax.set_ylabel('log mgf')
     ax.set_title(f'rho = {rho}')
@@ -82,7 +98,7 @@ def get_estimates_of_log_normalized_mgf(a_sim_param: InitialParameter):
     list_of_estimates_log_mgf = []
     list_of_estimates_mgf = []
     for index in tqdm(range(len(a_sim_param.list_of_t)), desc="Iterating over t: "):
-        log_mgf, mgf = get_estimates_of_two_mgfs_for_one_t(
+        log_mgf = get_estimates_of_log_mgf_for_one_t(
             a_sim_param.list_of_t[index],
             a_sim_param.const_num_iter,
             a_sim_param.const_arr_rate,
@@ -91,12 +107,11 @@ def get_estimates_of_log_normalized_mgf(a_sim_param: InitialParameter):
             a_sim_param.sim_length
         )
         list_of_estimates_log_mgf.append(log_mgf)
-        list_of_estimates_mgf.append(mgf)
     return list_of_estimates_log_mgf
 
 
-def get_estimates_of_two_mgfs_for_one_t(t: float, num_iter: int, arr_rate: float, serv_rate: float, batch_size: int,
-                                        sim_length: int):
+def get_estimates_of_log_mgf_for_one_t(t: float, num_iter: int, arr_rate: float, serv_rate: float, batch_size: int,
+                                       sim_length: int):
     """
     :param t: parameter of the mgf
     :param num_iter: number of Monte Carlo simulations
@@ -104,25 +119,22 @@ def get_estimates_of_two_mgfs_for_one_t(t: float, num_iter: int, arr_rate: float
     :param serv_rate: service rate for all the runs
     :param batch_size:
     :param sim_length: length of the simulation
-    :return: the mgf of the waiting time
+    :return:
                 the log of the mgf of the normalized waiting times
     """
-    sums_of_waiting_times = get_sums_of_waiting_times_for_each_run(num_iter, arr_rate, serv_rate, batch_size,
-                                                                   sim_length)
-    waiting_time_mgf = compute_empirical_waiting_time_mgf(sums_of_waiting_times, t)
-    # normalize the (sum of )waiting times
-    normalized_waiting_time_mgfs = normalize_sums_of_waiting_times(sums_of_waiting_times, arr_rate, serv_rate,
-                                                                   batch_size)
+    means_of_waiting_times = get_means_of_waiting_times_for_each_run(num_iter, arr_rate, serv_rate,
+                                                                     batch_size, sim_length)
+    normalized_waiting_time_mgfs = normalize_means_of_waiting_times(means_of_waiting_times, arr_rate, serv_rate,
+                                                                    batch_size)
     log_mgf_waiting_times = compute_log_of_normalized_waiting_time_mgf(normalized_waiting_time_mgfs, t)
-    return log_mgf_waiting_times, waiting_time_mgf
+    return log_mgf_waiting_times
 
 
-def normalize_sums_of_waiting_times(sums_of_waiting_times: List, arr_rate: float, serv_rate: float, batch_size: int):
-    mean_waiting_times = [sum_w / batch_size for sum_w in sums_of_waiting_times]
+def normalize_means_of_waiting_times(means_waiting_times: List, arr_rate: float, serv_rate: float, batch_size: int):
     expected_waiting_time = compute_mm1_mean(arr_rate, serv_rate)
     variance_batch_waiting_times = compute_batch_waiting_times_variance(batch_size, arr_rate, serv_rate)
-    normalized_batch_mean_waiting_times = [(mean_value - expected_waiting_time) / variance_batch_waiting_times
-                                           for mean_value in mean_waiting_times]
+    normalized_batch_mean_waiting_times = [(mean_value - expected_waiting_time) / np.sqrt(variance_batch_waiting_times)
+                                           for mean_value in means_waiting_times]
     # will need to compute the expectation adn variance of the waiting times
     return normalized_batch_mean_waiting_times
 
@@ -132,44 +144,51 @@ def compute_empirical_waiting_time_mgf(sums_of_waiting_times: List, t: float):
 
 
 def compute_log_of_normalized_waiting_time_mgf(normalized_waiting_times_z_scores: List, t: float):
-    sample_average_mgf = np.mean(np.exp(t * np.array(normalized_waiting_times_z_scores)))
+    mgfs = np.exp(t * np.array(normalized_waiting_times_z_scores))
+    sample_average_mgf = np.mean(mgfs)
+    print(f"The coefficient of variation is: {sample_average_mgf / np.std(mgfs)}")
     return np.log(sample_average_mgf)
 
 
-def get_sums_of_waiting_times_for_each_run(num_iter: int, arr_rate: float, serv_rate: float, batch_size: int,
-                                           sim_length: int):
+def get_means_of_waiting_times_for_each_run(num_iter: int, arr_rate: float, serv_rate: float,
+                                            batch_size: int, sim_length: int, warm_up_period: int = 0):
     """
     :param num_iter: number of Monte Carlo simulations
     :param arr_rate: arrival rate for all the iterations
     :param serv_rate: service rate for all the runs
     :param batch_size:
     :param sim_length: length of the simulation
-    :return: a list of the sums of the waiting times for the given batch size
+    :param warm_up_period:
+    :return: a list of the means of the waiting times for the given batch size
     """
-    list_of_sums = []
+    list_of_means = []
     for _ in range(num_iter):
-        list_of_sums.append(get_one_sum_of_waiting_time_for_one_sim(arr_rate, serv_rate, batch_size, sim_length))
-    return list_of_sums
+        list_of_means.append(get_waiting_time_batch_means_for_one_sim(arr_rate, serv_rate, batch_size, sim_length,
+                                                                      warm_up_period))
+    return list_of_means
 
 
-def get_one_sum_of_waiting_time_for_one_sim(arr_rate: float, serv_rate: float, batch_size: int,
-                                            sim_length: int):
+def get_waiting_time_batch_means_for_one_sim(arr_rate: float, serv_rate: float, batch_size: int, sim_length: int,
+                                             warm_up_period: int = 0):
     """
     :param arr_rate: arrival rate for all the iterations
     :param serv_rate: service rate for all the runs
     :param batch_size:
     :param sim_length: length of the simulation
-    :return: one sum of the waiting times for the given batch size for one run
+    :param warm_up_period: part of the data to disgard
+    :return: waiting_time non-overlapping batch means
     """
     start_time = 0
     end_time = sim_length
     my_arrival_rates = [arr_rate, arr_rate]
     time_of_changes = [end_time]
     my_service_rates = [serv_rate, serv_rate]
-    wait_times, _ = simulate_deds_return_wait_times(start_time, end_time, my_arrival_rates, time_of_changes,
-                                                    my_service_rates)
-    retained_wait_times = wait_times[-batch_size:]
-    return sum(retained_wait_times)
+    wait_times, wait_times_ts = simulate_deds_return_wait_times(start_time, end_time, my_arrival_rates, time_of_changes,
+                                                                my_service_rates)
+    wait_times_ts = wait_times_ts[max(warm_up_period, 0):]
+    wait_times = wait_times[max(warm_up_period, 0):]
+    nobm_wait_times, _ = create_nonoverlapping_batch_means(wait_times, wait_times_ts, batch_size)
+    return np.mean(nobm_wait_times)
 
 
 if __name__ == "__main__":
