@@ -10,3 +10,7 @@ Author: Harold Nemo Adodo Nikoue
 part of my chapter on parallel partial observability in my thesis
 Date: 10/16/2021
 """
+
+# set the parameters of the experiment
+
+# set the parameters of the simulation
