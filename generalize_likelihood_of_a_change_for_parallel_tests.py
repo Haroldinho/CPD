@@ -12,8 +12,8 @@ Author: Harold Nemo Adodo Nikoue
 part of my chapter on parallel partial observability in my thesis
 Date: 10/17/2021
 """
-import numpy as np
 # %% IMPORTS
+import numpy as np
 import pandas as pd
 import xgboost as xgb
 from hyperopt import hp

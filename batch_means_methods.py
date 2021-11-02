@@ -2,11 +2,13 @@
                     Change Point Detection
         Implement Batch Means Methods to reduce the correlation of the in-sample estimates
 """
+from typing import List, Tuple
+
 import numpy as np
 
 
 # @my_timer
-def create_nonoverlapping_batch_means(x_data, timestamps, batch_size=5):
+def create_nonoverlapping_batch_means(x_data, timestamps, batch_size=5) -> Tuple[List[float], List[float]]:
     """
     :param x_data: vector/array of input data of size n
     :param timestamps: timestamp of each point
