@@ -289,22 +289,52 @@ def plot_roc_param_all_delta_rhos(observation_type="Wait_Times", selected_rho=0.
     plt.close()
 
 
-#     for batch in batch_sizes:
-#         reduced_df = results_df[results_df["batch size"] == batch]
-#         plt.figure()
-#         sns.scatterplot(data=reduced_df, x="fp_rate", y="tp_rate", size="delta_rho")
-#         #        plt.plot(reduced_df["fp_rate"], reduced_df["tp_rate"], 'o-')
-#         #        plt.xlabel("fpR")
-#         #        plt.ylabel("tpR")
-#         axes = plt.gca()
-#         axes.set_xlim([0, 1.05])
-#         axes.set_ylim([0, 1.05])
-#         plt.title(f"ROC Batch of Size: {batch}")
-#         plt.savefig(file_name_prefix + "ROC_parametric_batch_{}_rho0pt5.png".format(int(batch)))
-#         plt.close()
+def plot_roc_param_all_delta_rho_arl_1(observation_type="Wait_Times", selected_rho=0.5):
+    selected_batch_sizes = [100, 200, 500, 1000]
+    if observation_type == "Wait_Times":
+        file_name_prefix = "Wait_Times/"
+        results_df_50 = pd.read_csv("SimpleDetection_Batch_of_size_50_rcpm.csv")
+        results_df_100 = pd.read_csv("SimpleDetection_Batch_of_size_100_rcpm.csv")
+        results_df_150 = pd.read_csv("SimpleDetection_Batch_of_size_150_rcpm.csv")
+        results_df_200 = pd.read_csv("SimpleDetection_Batch_of_size_200_rcpm.csv")
+        results_df_500 = pd.read_csv("SimpleDetection_Batch_of_size_500_rcpm.csv")
+        results_df_1000 = pd.read_csv("SimpleDetection_Batch_of_size_1000_rcpm.csv")
+        result_dfs = [results_df_50, results_df_150, results_df_100, results_df_200, results_df_500, results_df_1000]
+    elif observation_type == "Age":
+        file_name_prefix = "Age_of_process/"
+        results_df_100 = pd.read_csv(file_name_prefix + "SimpleDetection_age_of_process_Batch_of_size_100_rcpm.csv")
+        results_df_200 = pd.read_csv(file_name_prefix + "SimpleDetection_age_of_process_Batch_of_size_200_rcpm.csv")
+        results_df_500 = pd.read_csv(file_name_prefix + "SimpleDetection_age_of_process_Batch_of_size_500_rcpm.csv")
+        results_df_1000 = pd.read_csv(file_name_prefix + "SimpleDetection_age_of_process_Batch_of_size_1000_rcpm.csv")
+        result_dfs = [results_df_100, results_df_200, results_df_500, results_df_1000]
+    elif observation_type == "Queue":
+        file_name_prefix = "Queue_Length/"
+        results_df_100 = pd.read_csv(file_name_prefix + "SimpleDetection_queue_length_Batch_of_size_100_rcpm.csv")
+        results_df_200 = pd.read_csv(file_name_prefix + "SimpleDetection_queue_length_Batch_of_size_200_rcpm.csv")
+        results_df_500 = pd.read_csv(file_name_prefix + "SimpleDetection_queue_length_Batch_of_size_500_rcpm.csv")
+        results_df_1000 = pd.read_csv(file_name_prefix + "SimpleDetection_queue_length_Batch_of_size_1000_rcpm.csv")
+        result_dfs = [results_df_100, results_df_200, results_df_500, results_df_1000]
+    results_df = pd.concat(result_dfs)
+    results_df.columns = results_df.columns.str.lower()
+    results_df = results_df.loc[results_df["batch size"].isin(selected_batch_sizes)]
+    # all the missing values correspond to
+    results_df = results_df.dropna(subset=['arl_1'])
+    if selected_rho in list(results_df["rho"].unique()):
+        results_df = results_df[results_df["rho"] == selected_rho]
+    batch_sizes = list(results_df["batch size"].unique())
+    plt.figure()
+    #     sns.scatterplot(data=results_df, x="fp_rate", y="tp_rate", size="arl_1", hue="batch size")
+    sns.scatterplot(data=results_df, x="fp_rate", y="tp_rate", hue="batch size")
+    axes = plt.gca()
+    axes.set_xlim([0, 1.05])
+    axes.set_ylim([0, 1.05])
+    plt.title("ROC")
+    plt.savefig(file_name_prefix + "ROC_parametric_rho_{}.png".format(int(selected_rho * 100)))
+    plt.close()
 
 
 def plot_correct_vs_arl1_param_all_delta_rhos(observation_type="Wait_Times", selected_rho=0.5):
+    selected_batch_sizes = [100, 200, 500, 1000]
     result_df = []
     if observation_type == "Wait_Times":
         results_df_50 = pd.read_csv("SimpleDetection_Batch_of_size_50_rcpm.csv")
@@ -337,6 +367,7 @@ def plot_correct_vs_arl1_param_all_delta_rhos(observation_type="Wait_Times", sel
     results_df.columns = results_df.columns.str.lower()
     if selected_rho in list(results_df["rho"].unique()):
         results_df = results_df[results_df["rho"] == selected_rho]
+    results_df = results_df.loc[results_df["batch size"].isin(selected_batch_sizes)]
     batch_sizes = list(results_df["batch size"].unique())
     delta_rhos = list(results_df["delta_rho"].unique())
     for delta_rho in delta_rhos:
@@ -355,6 +386,7 @@ def plot_correct_vs_arl1_param_all_delta_rhos(observation_type="Wait_Times", sel
         plt.savefig(file_name_prefix + "Correct_detection_vs_Delay_parametric_delta_rho_{}_rho0pt5.png".format(
             int(delta_rho * 100)))
         plt.close()
+    print(results_df["batch size"].unique())
 
 
 def plot_corrections(is_parametric=True, observation_type="Wait_Times", selected_rho=0.5):
@@ -483,13 +515,22 @@ if __name__ == "__main__":
     #     results_df = pd.read_csv("SimpleDetection_Batch_of_size_1000_rcpm.csv")
     #     main_simple_test(results_df)
     # plot_correct_vs_arl1_param_all_delta_rhos("Queue", selected_rho=0.25)
-    plot_roc_param_all_delta_rhos("Queue", selected_rho=0.25)
-    plot_roc_param_all_delta_rhos("Queue", selected_rho=0.5)
-    plot_roc_param_all_delta_rhos("Queue", selected_rho=0.75)
-    plot_roc_param_all_delta_rhos("Wait_Times", selected_rho=0.25)
-    plot_roc_param_all_delta_rhos("Wait_Times", selected_rho=0.5)
-    plot_roc_param_all_delta_rhos("Wait_Times", selected_rho=0.75)
-    plot_roc_param_all_delta_rhos("Age", selected_rho=0.25)
-    plot_roc_param_all_delta_rhos("Age", selected_rho=0.5)
-    plot_roc_param_all_delta_rhos("Age", selected_rho=0.75)
+    #     plot_roc_param_all_delta_rhos("Queue", selected_rho=0.25)
+    #     plot_roc_param_all_delta_rhos("Queue", selected_rho=0.5)
+    #     plot_roc_param_all_delta_rhos("Queue", selected_rho=0.75)
+    #     plot_roc_param_all_delta_rhos("Wait_Times", selected_rho=0.25)
+    #     plot_roc_param_all_delta_rhos("Wait_Times", selected_rho=0.5)
+    #     plot_roc_param_all_delta_rhos("Wait_Times", selected_rho=0.75)
+    #     plot_roc_param_all_delta_rhos("Age", selected_rho=0.25)
+    #     plot_roc_param_all_delta_rhos("Age", selected_rho=0.5)
+    #     plot_roc_param_all_delta_rhos("Age", selected_rho=0.75)
     # plot_corrections(is_parametric=True, observation_type="Queue", selected_rho=0.25)
+    plot_roc_param_all_delta_rho_arl_1("Queue", selected_rho=0.25)
+    plot_roc_param_all_delta_rho_arl_1("Queue", selected_rho=0.5)
+    plot_roc_param_all_delta_rho_arl_1("Queue", selected_rho=0.75)
+    plot_roc_param_all_delta_rho_arl_1("Wait_Times", selected_rho=0.25)
+    plot_roc_param_all_delta_rho_arl_1("Wait_Times", selected_rho=0.5)
+    plot_roc_param_all_delta_rho_arl_1("Wait_Times", selected_rho=0.75)
+    plot_roc_param_all_delta_rho_arl_1("Age", selected_rho=0.25)
+    plot_roc_param_all_delta_rho_arl_1("Age", selected_rho=0.5)
+    plot_roc_param_all_delta_rho_arl_1("Age", selected_rho=0.75)

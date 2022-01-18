@@ -226,7 +226,7 @@ def generate_multiple_observationss_cdr_vs_fa(
     cdr_tuple_age = return_fa_cdr(dic_of_age_results)
     cdr_tuple_queue = return_fa_cdr(dic_of_queue_results)
     cdr_tuple_wait = return_fa_cdr(dic_of_wait_results)
-    plot_comp_curves(cdr_tuple_all, cdr_tuple_age, cdr_tuple_queue, cdr_tuple_wait, "FA", "CDR",
+    plot_comp_curves(cdr_tuple_all, cdr_tuple_age, cdr_tuple_queue, cdr_tuple_wait, "FAR", "CDR",
                      "Figures/ParallelTestFinalResults/CDR_vs_FA.png")
 
 
